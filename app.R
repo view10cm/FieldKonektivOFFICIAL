@@ -820,6 +820,122 @@ ui <- fluidPage(
         margin-top: 20px;
       }
       
+      /* NEW STYLES FOR SURVEY BUTTONS */
+      .survey-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 30px;
+        margin-top: 40px;
+      }
+      
+      .survey-btn {
+        background-color: white;
+        border: none;
+        border-radius: 20px;
+        padding: 40px 30px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 8px 25px rgba(0, 100, 0, 0.1);
+        border: 3px solid transparent;
+        height: 250px;
+      }
+      
+      .survey-btn:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 35px rgba(0, 100, 0, 0.2);
+        border-color: #4CAF50;
+      }
+      
+      .survey-icon {
+        font-size: 70px;
+        margin-bottom: 20px;
+        color: #4CAF50;
+        transition: all 0.3s ease;
+      }
+      
+      .survey-btn:hover .survey-icon {
+        transform: scale(1.1);
+      }
+      
+      .survey-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1B5E20;
+        margin-bottom: 10px;
+      }
+      
+      .survey-desc {
+        font-size: 14px;
+        color: #666;
+        line-height: 1.5;
+        max-width: 80%;
+      }
+      
+      /* Color variants for each survey type */
+      .relocation-btn {
+        background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+      }
+      
+      .relocation-btn:hover {
+        background: linear-gradient(135deg, #C8E6C9 0%, #A5D6A7 100%);
+      }
+      
+      .subdivision-btn {
+        background: linear-gradient(135deg, #F1F8E9 0%, #DCEDC8 100%);
+      }
+      
+      .subdivision-btn:hover {
+        background: linear-gradient(135deg, #DCEDC8 0%, #C5E1A5 100%);
+      }
+      
+      .verification-btn {
+        background: linear-gradient(135deg, #F9FBE7 0%, #F0F4C3 100%);
+      }
+      
+      .verification-btn:hover {
+        background: linear-gradient(135deg, #F0F4C3 0%, #E6EE9C 100%);
+      }
+      
+      .topography-btn {
+        background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+      }
+      
+      .topography-btn:hover {
+        background: linear-gradient(135deg, #BBDEFB 0%, #90CAF9 100%);
+      }
+      
+      /* Survey form container */
+      .survey-form-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 30px;
+      }
+      
+      .survey-back-btn {
+        background-color: transparent;
+        color: #4CAF50;
+        border: 2px solid #4CAF50;
+        padding: 12px 24px;
+        border-radius: 10px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 30px;
+      }
+      
+      .survey-back-btn:hover {
+        background-color: #E8F5E9;
+      }
+      
       @media (max-width: 992px) {
         .content-wrapper {
           flex-direction: column;
@@ -858,6 +974,24 @@ ui <- fluidPage(
         .dashboard-stats {
           grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         }
+        
+        .survey-grid {
+          grid-template-columns: 1fr;
+          gap: 20px;
+        }
+        
+        .survey-btn {
+          height: 220px;
+          padding: 30px 20px;
+        }
+        
+        .survey-icon {
+          font-size: 60px;
+        }
+        
+        .survey-title {
+          font-size: 22px;
+        }
       }
       
       @media (max-width: 768px) {
@@ -873,6 +1007,24 @@ ui <- fluidPage(
         
         .dashboard-content {
           padding: 20px;
+        }
+        
+        .survey-btn {
+          height: 200px;
+          padding: 25px 15px;
+        }
+        
+        .survey-icon {
+          font-size: 50px;
+          margin-bottom: 15px;
+        }
+        
+        .survey-title {
+          font-size: 20px;
+        }
+        
+        .survey-desc {
+          font-size: 13px;
         }
       }
       
@@ -940,6 +1092,9 @@ server <- function(input, output, session) {
   
   # Track active dashboard tab
   dashboard_tab <- reactiveVal("dashboard")
+  
+  # Track selected survey type
+  selected_survey_type <- reactiveVal(NULL)
   
   # Header based on current page
   output$page_header <- renderUI({
@@ -1271,43 +1426,127 @@ server <- function(input, output, session) {
                       )
                     )
                   } else if (dashboard_tab() == "create_survey") {
-                    div(
-                      h2("Create New Survey", style = "color: #1B5E20; margin-bottom: 25px;"),
-                      div(class = "form-group",
-                          tags$label(class = "form-label", `for` = "survey-name", "Survey Name"),
-                          textInput("survey_name", label = NULL, placeholder = "Enter survey project name")
-                      ),
-                      div(class = "form-group",
-                          tags$label(class = "form-label", `for` = "survey-location", "Location"),
-                          textInput("survey_location", label = NULL, placeholder = "Enter survey location")
-                      ),
-                      div(class = "form-group",
-                          tags$label(class = "form-label", `for` = "survey-type", "Survey Type"),
-                          selectInput("survey_type", label = NULL,
-                                      choices = c("Topographic Survey" = "topographic",
-                                                  "Boundary Survey" = "boundary",
-                                                  "Construction Survey" = "construction",
-                                                  "Hydrographic Survey" = "hydrographic",
-                                                  "Other" = "other"))
-                      ),
-                      div(class = "form-group",
-                          tags$label(class = "form-label", `for` = "survey-description", "Description"),
-                          textAreaInput("survey_description", label = NULL, placeholder = "Enter survey description...", rows = 4)
-                      ),
-                      div(class = "form-group",
-                          tags$label(class = "form-label", `for` = "survey-start-date", "Start Date"),
-                          dateInput("survey_start_date", label = NULL, value = Sys.Date())
-                      ),
-                      div(class = "form-group",
-                          tags$label(class = "form-label", `for` = "survey-team", "Team Members"),
-                          selectizeInput("survey_team", label = NULL, 
-                                         choices = c("John Smith", "Sarah Johnson", "Mike Brown", "Emily Davis", "David Wilson"),
-                                         multiple = TRUE,
-                                         options = list(placeholder = 'Select team members...'))
-                      ),
-                      actionButton("create_survey_btn", "Create Survey", class = "btn-primary",
-                                   style = "width: auto; min-width: 200px; margin-top: 20px;")
-                    )
+                    # NEW: Survey type selection buttons
+                    if (is.null(selected_survey_type())) {
+                      div(
+                        h2("Select Survey Type", style = "color: #1B5E20; margin-bottom: 25px; text-align: center;"),
+                        p("Choose the type of survey you want to create:", 
+                          style = "color: #666; margin-bottom: 40px; text-align: center; font-size: 18px;"),
+                        
+                        div(class = "survey-grid",
+                            actionButton("select_relocation", 
+                                         label = div(
+                                           div(class = "survey-icon", icon("exchange-alt")),
+                                           div(class = "survey-title", "Relocation Survey"),
+                                           div(class = "survey-desc", "Survey for property relocation and boundary determination")
+                                         ),
+                                         class = "survey-btn relocation-btn"),
+                            
+                            actionButton("select_subdivision", 
+                                         label = div(
+                                           div(class = "survey-icon", icon("map-signs")),
+                                           div(class = "survey-title", "Subdivision Survey"),
+                                           div(class = "survey-desc", "Divide larger properties into smaller parcels")
+                                         ),
+                                         class = "survey-btn subdivision-btn"),
+                            
+                            actionButton("select_verification", 
+                                         label = div(
+                                           div(class = "survey-icon", icon("check-double")),
+                                           div(class = "survey-title", "Verification Survey"),
+                                           div(class = "survey-desc", "Verify existing property boundaries and measurements")
+                                         ),
+                                         class = "survey-btn verification-btn"),
+                            
+                            actionButton("select_topography", 
+                                         label = div(
+                                           div(class = "survey-icon", icon("mountain")),
+                                           div(class = "survey-title", "Topography Survey"),
+                                           div(class = "survey-desc", "Detailed topographic mapping of land features")
+                                         ),
+                                         class = "survey-btn topography-btn")
+                        )
+                      )
+                    } else {
+                      # Survey form for selected type
+                      div(class = "survey-form-container",
+                          actionButton("back_to_survey_types", "← Back to Survey Types", 
+                                       class = "survey-back-btn"),
+                          
+                          h2(paste(selected_survey_type(), "Survey Request"), 
+                             style = "color: #1B5E20; margin-bottom: 25px;"),
+                          p("Fill out the form below to submit your survey request.", 
+                            style = "color: #666; margin-bottom: 30px;"),
+                          
+                          # Survey Form
+                          div(class = "form-group",
+                              tags$label(class = "form-label", `for` = "surveyor-name", 
+                                         span("Surveyor Name", span(class = "required", "*"))),
+                              textInput("surveyor_name", label = NULL, placeholder = "Enter surveyor's full name")
+                          ),
+                          
+                          div(class = "form-group",
+                              tags$label(class = "form-label", `for` = "survey-start-date", 
+                                         span("Start Date", span(class = "required", "*"))),
+                              dateInput("survey_start_date", label = NULL, value = Sys.Date())
+                          ),
+                          
+                          div(class = "form-group",
+                              tags$label(class = "form-label", `for` = "survey-reason", 
+                                         span("Reason for getting Survey", span(class = "required", "*"))),
+                              textAreaInput("survey_reason", label = NULL, 
+                                            placeholder = "Describe the purpose and reason for this survey...", 
+                                            rows = 4)
+                          ),
+                          
+                          div(class = "form-group",
+                              tags$label(class = "form-label", `for` = "client-name", "Client Name (Optional)"),
+                              textInput("client_name", label = NULL, placeholder = "Enter client's name")
+                          ),
+                          
+                          div(class = "form-group",
+                              tags$label(class = "form-label", `for` = "property-address", "Property Address (Optional)"),
+                              textInput("property_address", label = NULL, placeholder = "Enter property address")
+                          ),
+                          
+                          div(class = "form-group",
+                              tags$label(class = "form-label", `for` = "property-size", "Property Size (Optional)"),
+                              div(style = "display: flex; gap: 10px;",
+                                  textInput("property_size", label = NULL, placeholder = "Enter size", width = "70%"),
+                                  selectInput("size_unit", label = NULL, 
+                                              choices = c("Square Meters" = "sqm",
+                                                          "Hectares" = "hectares",
+                                                          "Acres" = "acres",
+                                                          "Square Feet" = "sqft"),
+                                              width = "30%")
+                              )
+                          ),
+                          
+                          div(class = "form-group",
+                              tags$label(class = "form-label", `for` = "survey-urgency", "Urgency Level"),
+                              selectInput("survey_urgency", label = NULL,
+                                          choices = c("Normal (2-4 weeks)" = "normal",
+                                                      "High Priority (1-2 weeks)" = "high",
+                                                      "Urgent (3-7 days)" = "urgent",
+                                                      "Emergency (1-3 days)" = "emergency"),
+                                          selected = "normal")
+                          ),
+                          
+                          div(class = "form-group",
+                              tags$label(class = "form-label", `for` = "additional-notes", "Additional Notes (Optional)"),
+                              textAreaInput("additional_notes", label = NULL, 
+                                            placeholder = "Any additional information or special requirements...", 
+                                            rows = 3)
+                          ),
+                          
+                          div(style = "display: flex; gap: 15px; margin-top: 30px;",
+                              actionButton("create_survey_btn", "Submit Survey Request", class = "btn-primary",
+                                           style = "width: auto; min-width: 200px;"),
+                              actionButton("clear_survey_form", "Clear Form", class = "btn-secondary",
+                                           style = "width: auto; min-width: 150px;")
+                          )
+                      )
+                    }
                   } else if (dashboard_tab() == "profile") {
                     div(
                       h2("User Profile", style = "color: #1B5E20; margin-bottom: 25px;"),
@@ -1701,14 +1940,17 @@ server <- function(input, output, session) {
   # Dashboard navigation handlers
   observeEvent(input$nav_dashboard, {
     dashboard_tab("dashboard")
+    selected_survey_type(NULL)
   })
   
   observeEvent(input$nav_create_survey, {
     dashboard_tab("create_survey")
+    selected_survey_type(NULL)
   })
   
   observeEvent(input$nav_profile, {
     dashboard_tab("profile")
+    selected_survey_type(NULL)
   })
   
   observeEvent(input$nav_logout, {
@@ -1724,29 +1966,124 @@ server <- function(input, output, session) {
     showNotification("You have been logged out successfully.", type = "default")
   })
   
-  # Create survey handler
+  # Survey type selection handlers
+  observeEvent(input$select_relocation, {
+    selected_survey_type("Relocation")
+  })
+  
+  observeEvent(input$select_subdivision, {
+    selected_survey_type("Subdivision")
+  })
+  
+  observeEvent(input$select_verification, {
+    selected_survey_type("Verification")
+  })
+  
+  observeEvent(input$select_topography, {
+    selected_survey_type("Topography")
+  })
+  
+  observeEvent(input$back_to_survey_types, {
+    selected_survey_type(NULL)
+  })
+  
+  # Create survey handler - UPDATED
   observeEvent(input$create_survey_btn, {
-    survey_name <- input$survey_name
-    survey_location <- input$survey_location
+    # Get form values
+    surveyor_name <- input$surveyor_name
+    start_date <- input$survey_start_date
+    survey_reason <- input$survey_reason
+    survey_type <- selected_survey_type()
     
-    if (is.null(survey_name) || survey_name == "" || is.null(survey_location) || survey_location == "") {
-      showNotification("Please enter survey name and location.", type = "warning")
+    # Basic validation
+    if (is.null(surveyor_name) || surveyor_name == "") {
+      showNotification("Surveyor Name is required.", type = "warning")
       return()
     }
     
-    showNotification(
-      paste("Survey '", survey_name, "' created successfully!"),
-      type = "default",
-      duration = 5
+    if (is.null(start_date)) {
+      showNotification("Start Date is required.", type = "warning")
+      return()
+    }
+    
+    if (is.null(survey_reason) || survey_reason == "") {
+      showNotification("Reason for getting Survey is required.", type = "warning")
+      return()
+    }
+    
+    # Get optional fields
+    client_name <- input$client_name
+    property_address <- input$property_address
+    property_size <- input$property_size
+    size_unit <- input$size_unit
+    survey_urgency <- input$survey_urgency
+    additional_notes <- input$additional_notes
+    
+    # Format urgency for display
+    urgency_display <- switch(survey_urgency,
+                              "normal" = "Normal (2-4 weeks)",
+                              "high" = "High Priority (1-2 weeks)",
+                              "urgent" = "Urgent (3-7 days)",
+                              "emergency" = "Emergency (1-3 days)",
+                              survey_urgency)
+    
+    # Create success message
+    success_msg <- paste(
+      "Survey request submitted successfully!\n\n",
+      "Survey Type:", survey_type, "\n",
+      "Surveyor:", surveyor_name, "\n",
+      "Start Date:", format(start_date, "%B %d, %Y"), "\n",
+      "Urgency:", urgency_display
     )
     
-    # Reset form
-    updateTextInput(session, "survey_name", value = "")
-    updateTextInput(session, "survey_location", value = "")
-    updateSelectInput(session, "survey_type", selected = "topographic")
-    updateTextAreaInput(session, "survey_description", value = "")
+    if (client_name != "") {
+      success_msg <- paste(success_msg, "\nClient:", client_name)
+    }
+    
+    showNotification(
+      success_msg,
+      type = "default",
+      duration = 10
+    )
+    
+    # Reset form and go back to survey types
+    shinyjs::reset("survey-form")
+    selected_survey_type(NULL)
+    
+    # In a real application, you would save this data to the database
+    # For example:
+    # con <- connect_to_db()
+    # if (!is.null(con)) {
+    #   query <- sprintf("INSERT INTO surveys (survey_type, surveyor_name, start_date, reason, client_name, property_address, property_size, size_unit, urgency, additional_notes, user_id) VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d)",
+    #                    dbEscapeStrings(con, survey_type),
+    #                    dbEscapeStrings(con, surveyor_name),
+    #                    format(start_date, "%Y-%m-%d"),
+    #                    dbEscapeStrings(con, survey_reason),
+    #                    dbEscapeStrings(con, client_name),
+    #                    dbEscapeStrings(con, property_address),
+    #                    dbEscapeStrings(con, property_size),
+    #                    dbEscapeStrings(con, size_unit),
+    #                    dbEscapeStrings(con, survey_urgency),
+    #                    dbEscapeStrings(con, additional_notes),
+    #                    user_session$user_id)
+    #   dbExecute(con, query)
+    #   dbDisconnect(con)
+    # }
+  })
+  
+  # Clear form handler
+  observeEvent(input$clear_survey_form, {
+    updateTextInput(session, "surveyor_name", value = "")
     updateDateInput(session, "survey_start_date", value = Sys.Date())
-    updateSelectizeInput(session, "survey_team", selected = character(0))
+    updateTextAreaInput(session, "survey_reason", value = "")
+    updateTextInput(session, "client_name", value = "")
+    updateTextInput(session, "property_address", value = "")
+    updateTextInput(session, "property_size", value = "")
+    updateSelectInput(session, "size_unit", selected = "sqm")
+    updateSelectInput(session, "survey_urgency", selected = "normal")
+    updateTextAreaInput(session, "additional_notes", value = "")
+    
+    showNotification("Form cleared successfully.", type = "default", duration = 3)
   })
   
   # Update profile handler
@@ -1937,7 +2274,7 @@ server <- function(input, output, session) {
     }
   })
   
-  # Handle login button click - FIXED NOTIFICATION TYPE
+  # Handle login button click
   observeEvent(input$login_btn, {
     email <- input$login_email
     password <- input$login_password
@@ -1967,7 +2304,7 @@ server <- function(input, output, session) {
     }
   })
   
-  # Handle create account button click - FIXED NOTIFICATION TYPES
+  # Handle create account button click
   observeEvent(input$create_account_btn, {
     # Get form values
     fullname <- input$signup_fullname
