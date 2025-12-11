@@ -109,7 +109,9 @@ create_user <- function(full_name, email, phone, password) {
     return(list(success = TRUE, message = "User created successfully"))
   }, error = function(e) {
     try(dbDisconnect(con), silent = TRUE)
-    return(list(success = FALSE, message = paste("Database error:", e$message)))
+    error_msg <- gsub("['\"]", "", e$message)
+    error_msg <- gsub("[\r\n]", " ", error_msg)
+    return(list(success = FALSE, message = paste("Database error:", error_msg)))
   })
 }
 
@@ -612,7 +614,7 @@ ui <- fluidPage(
   )
 )
 
-# Server logic (same as before, no changes needed)
+# Server logic
 server <- function(input, output, session) {
   
   # Reactive value to track current page
@@ -951,121 +953,99 @@ server <- function(input, output, session) {
       user_session$full_name <- user$full_name
       user_session$email <- user$email
       
-      showNotification(paste("Login successful! Welcome,", user$full_name), type = "success")
+      showNotification(paste("Login successful! Welcome,", user$full_name), type = "default")
     } else {
       showNotification("Invalid credentials. Please check your email and password.", type = "error")
     }
   })
   
-  # Handle create account button click - WITH BETTER ERROR HANDLING
+  # Handle create account button click
   observeEvent(input$create_account_btn, {
-    # Use tryCatch to prevent R from crashing
-    tryCatch({
-      # Get form values
-      fullname <- input$signup_fullname
-      email <- input$signup_email
-      phone <- input$signup_phone
-      password <- input$signup_password
-      confirm <- input$signup_confirm
-      terms <- input$signup_terms
-      
-      # Basic validation first
-      if (is.null(fullname) || fullname == "") {
-        showNotification("Full name is required", type = "error", duration = 5)
+    # Get form values
+    fullname <- input$signup_fullname
+    email <- input$signup_email
+    phone <- input$signup_phone
+    password <- input$signup_password
+    confirm <- input$signup_confirm
+    terms <- input$signup_terms
+    
+    # Basic validation first
+    if (is.null(fullname) || fullname == "") {
+      showNotification("Full name is required", type = "warning", duration = 5)
+      return()
+    }
+    
+    if (is.null(email) || email == "") {
+      showNotification("Email address is required", type = "warning", duration = 5)
+      return()
+    } else if (!grepl("^[^@]+@[^@]+\\.[^@]+$", email)) {
+      showNotification("Please enter a valid email address", type = "warning", duration = 5)
+      return()
+    }
+    
+    # Phone number validation with specific rules
+    if (is.null(phone) || phone == "") {
+      showNotification("Phone number is required", type = "warning", duration = 5)
+      return()
+    } else {
+      phone_validation <- validate_phone_number(phone)
+      if (!phone_validation$valid) {
+        showNotification(phone_validation$message, type = "warning", duration = 5)
         return()
       }
+    }
+    
+    if (is.null(password) || password == "") {
+      showNotification("Password is required", type = "warning", duration = 5)
+      return()
+    } else if (nchar(password) < 8) {
+      showNotification("Password must be at least 8 characters long", type = "warning", duration = 5)
+      return()
+    } else if (!grepl("[A-Z]", password)) {
+      showNotification("Password must contain at least one uppercase letter", type = "warning", duration = 5)
+      return()
+    } else if (!grepl("[0-9]", password)) {
+      showNotification("Password must contain at least one number", type = "warning", duration = 5)
+      return()
+    }
+    
+    if (is.null(confirm) || confirm == "") {
+      showNotification("Please confirm your password", type = "warning", duration = 5)
+      return()
+    } else if (password != confirm) {
+      showNotification("Passwords do not match", type = "warning", duration = 5)
+      return()
+    }
+    
+    if (!isTRUE(terms)) {
+      showNotification("You must agree to the Terms of Service and Privacy Policy", type = "warning", duration = 5)
+      return()
+    }
+    
+    # If we get here, all validation passed
+    # Create user in database
+    result <- create_user(fullname, email, phone, password)
+    
+    if (result$success) {
+      showNotification(
+        paste("Account created successfully!", 
+              "Welcome to FieldConektiv,", fullname, "!"),
+        type = "default",
+        duration = 5
+      )
       
-      if (is.null(email) || email == "") {
-        showNotification("Email address is required", type = "error", duration = 5)
-        return()
-      } else if (!grepl("^[^@]+@[^@]+\\.[^@]+$", email)) {
-        showNotification("Please enter a valid email address", type = "error", duration = 5)
-        return()
-      }
+      # Reset form
+      shinyjs::reset("signup-form")
       
-      # Check if user exists - handle potential errors
-      user_exists <- tryCatch({
-        check_user_exists(email)
-      }, error = function(e) {
-        cat("Error checking if user exists:", e$message, "\n")
-        FALSE
-      })
-      
-      if (user_exists) {
-        showNotification("Email address is already registered", type = "error", duration = 5)
-        return()
-      }
-      
-      # Phone number validation with specific rules
-      if (is.null(phone) || phone == "") {
-        showNotification("Phone number is required", type = "error", duration = 5)
-        return()
-      } else {
-        phone_validation <- validate_phone_number(phone)
-        if (!phone_validation$valid) {
-          showNotification(phone_validation$message, type = "error", duration = 5)
-          return()
-        }
-      }
-      
-      if (is.null(password) || password == "") {
-        showNotification("Password is required", type = "error", duration = 5)
-        return()
-      } else if (nchar(password) < 8) {
-        showNotification("Password must be at least 8 characters long", type = "error", duration = 5)
-        return()
-      } else if (!grepl("[A-Z]", password)) {
-        showNotification("Password must contain at least one uppercase letter", type = "error", duration = 5)
-        return()
-      } else if (!grepl("[0-9]", password)) {
-        showNotification("Password must contain at least one number", type = "error", duration = 5)
-        return()
-      }
-      
-      if (is.null(confirm) || confirm == "") {
-        showNotification("Please confirm your password", type = "error", duration = 5)
-        return()
-      } else if (password != confirm) {
-        showNotification("Passwords do not match", type = "error", duration = 5)
-        return()
-      }
-      
-      if (!isTRUE(terms)) {
-        showNotification("You must agree to the Terms of Service and Privacy Policy", type = "error", duration = 5)
-        return()
-      }
-      
-      # If we get here, all validation passed
-      # Create user in database
-      result <- create_user(fullname, email, phone, password)
-      
-      if (result$success) {
-        showNotification(
-          paste("Account created successfully!", 
-                "Welcome to FieldConektiv,", fullname, "!"),
-          type = "success",
-          duration = 5
-        )
-        
-        # Reset form
-        shinyjs::reset("signup-form")
-        
-        # Navigate back to home immediately (no delay)
-        current_page("home")
-      } else {
-        showNotification(
-          result$message,
-          type = "error",
-          duration = 10
-        )
-      }
-    }, error = function(e) {
-      # Log the error but don't crash
-      cat("Unexpected error in account creation:", e$message, "\n")
-      
-      # Use alert instead of showNotification to avoid recursive errors
-      shinyjs::alert("An unexpected error occurred. Please try again.")
-    })
+      # Navigate back to home immediately (no delay)
+      current_page("home")
+    } else {
+      showNotification(
+        paste("Error:", result$message),
+        type = "error",
+        duration = 10
+      )
+    }
   })
   
   # Handle logout
@@ -1075,17 +1055,17 @@ server <- function(input, output, session) {
     user_session$full_name <- NULL
     user_session$email <- NULL
     
-    showNotification("You have been logged out successfully.", type = "info")
+    showNotification("You have been logged out successfully.", type = "default")
   })
   
   # Handle dashboard button
   observeEvent(input$dashboard_btn, {
-    showNotification("Dashboard feature coming soon!", type = "info")
+    showNotification("Dashboard feature coming soon!", type = "default")
   })
   
   # Handle profile button
   observeEvent(input$profile_btn, {
-    showNotification("Profile feature coming soon!", type = "info")
+    showNotification("Profile feature coming soon!", type = "default")
   })
 }
 
