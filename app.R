@@ -186,7 +186,7 @@ ui <- fluidPage(
         padding: 0;
       }
       
-      .landing-container, .signup-container, .policy-container {
+      .landing-container, .signup-container, .policy-container, .dashboard-container {
         min-height: 100vh;
         display: flex;
         flex-direction: column;
@@ -200,6 +200,16 @@ ui <- fluidPage(
         align-items: center;
         background-color: rgba(255, 255, 255, 0.95);
         box-shadow: 0 2px 10px rgba(0, 100, 0, 0.05);
+      }
+      
+      .dashboard-header {
+        padding: 20px 40px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #E8F5E9;
+        box-shadow: 0 2px 10px rgba(0, 100, 0, 0.1);
+        border-bottom: 3px solid #4CAF50;
       }
       
       .logo {
@@ -235,6 +245,14 @@ ui <- fluidPage(
         align-items: center;
         justify-content: center;
         padding: 40px 20px;
+      }
+      
+      .dashboard-content {
+        flex: 1;
+        padding: 40px;
+        max-width: 1400px;
+        margin: 0 auto;
+        width: 100%;
       }
       
       .policy-content {
@@ -322,6 +340,15 @@ ui <- fluidPage(
         margin: 0 auto;
       }
       
+      .dashboard-card {
+        background-color: white;
+        border-radius: 16px;
+        padding: 40px;
+        box-shadow: 0 10px 30px rgba(0, 100, 0, 0.1);
+        width: 100%;
+        margin-bottom: 30px;
+      }
+      
       .auth-title {
         font-size: 28px;
         font-weight: 600;
@@ -335,6 +362,19 @@ ui <- fluidPage(
         color: #1B5E20;
         margin-bottom: 20px;
         text-align: center;
+      }
+      
+      .dashboard-title {
+        font-size: 36px;
+        font-weight: 700;
+        color: #1B5E20;
+        margin-bottom: 10px;
+      }
+      
+      .dashboard-subtitle {
+        font-size: 18px;
+        color: #666;
+        margin-bottom: 30px;
       }
       
       .auth-subtitle {
@@ -476,6 +516,140 @@ ui <- fluidPage(
       .footer-links a:hover {
         color: #2E7D32;
         text-decoration: underline;
+      }
+      
+      .dashboard-nav {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+      }
+      
+      .nav-btn {
+        background-color: white;
+        color: #2E7D32;
+        border: 2px solid #C8E6C9;
+        padding: 15px 25px;
+        border-radius: 10px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 180px;
+      }
+      
+      .nav-btn:hover {
+        background-color: #4CAF50;
+        color: white;
+        border-color: #4CAF50;
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(76, 175, 80, 0.2);
+      }
+      
+      .nav-btn.active {
+        background-color: #4CAF50;
+        color: white;
+        border-color: #4CAF50;
+      }
+      
+      .nav-btn i {
+        font-size: 18px;
+      }
+      
+      .dashboard-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 25px;
+        margin-bottom: 40px;
+      }
+      
+      .stat-card {
+        background-color: white;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 5px 15px rgba(0, 100, 0, 0.08);
+        text-align: center;
+        border-top: 5px solid #4CAF50;
+        transition: transform 0.3s;
+      }
+      
+      .stat-card:hover {
+        transform: translateY(-5px);
+      }
+      
+      .stat-icon {
+        font-size: 40px;
+        color: #4CAF50;
+        margin-bottom: 15px;
+      }
+      
+      .stat-value {
+        font-size: 36px;
+        font-weight: 700;
+        color: #1B5E20;
+        margin-bottom: 5px;
+      }
+      
+      .stat-label {
+        font-size: 16px;
+        color: #666;
+      }
+      
+      .recent-activity {
+        background-color: white;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 5px 15px rgba(0, 100, 0, 0.08);
+      }
+      
+      .activity-title {
+        font-size: 22px;
+        font-weight: 600;
+        color: #1B5E20;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #E8F5E9;
+      }
+      
+      .activity-item {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 15px 0;
+        border-bottom: 1px solid #F1F8E9;
+      }
+      
+      .activity-item:last-child {
+        border-bottom: none;
+      }
+      
+      .activity-icon {
+        width: 40px;
+        height: 40px;
+        background-color: #E8F5E9;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #4CAF50;
+        font-size: 18px;
+      }
+      
+      .activity-content {
+        flex: 1;
+      }
+      
+      .activity-text {
+        color: #333;
+        margin-bottom: 5px;
+      }
+      
+      .activity-time {
+        font-size: 12px;
+        color: #888;
       }
       
       .demo-title {
@@ -656,17 +830,49 @@ ui <- fluidPage(
           font-size: 36px;
         }
         
-        .auth-card, .signup-card, .policy-card {
+        .auth-card, .signup-card, .policy-card, .dashboard-card {
           max-width: 100%;
           padding: 30px 20px;
         }
         
-        .header {
+        .header, .dashboard-header {
           padding: 15px 20px;
         }
         
         .policy-title {
           font-size: 28px;
+        }
+        
+        .dashboard-title {
+          font-size: 28px;
+        }
+        
+        .dashboard-nav {
+          justify-content: center;
+        }
+        
+        .nav-btn {
+          min-width: 160px;
+        }
+        
+        .dashboard-stats {
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        }
+      }
+      
+      @media (max-width: 768px) {
+        .nav-btn {
+          min-width: 140px;
+          padding: 12px 20px;
+          font-size: 14px;
+        }
+        
+        .stat-value {
+          font-size: 28px;
+        }
+        
+        .dashboard-content {
+          padding: 20px;
         }
       }
       
@@ -698,14 +904,8 @@ ui <- fluidPage(
   # Main UI structure
   div(
     id = "main-app",
-    # Header that appears on all pages
-    div(class = "header",
-        div(class = "logo", id = "logo",
-            div(class = "logo-icon", "FC"),
-            div(class = "logo-text", "FieldConektiv")
-        ),
-        uiOutput("header_content")
-    ),
+    # Header will be conditionally rendered in server
+    uiOutput("page_header"),
     
     # Conditional main content based on current page
     uiOutput("main_content"),
@@ -738,7 +938,40 @@ server <- function(input, output, session) {
     email = NULL
   )
   
-  # Header content based on current page
+  # Track active dashboard tab
+  dashboard_tab <- reactiveVal("dashboard")
+  
+  # Header based on current page
+  output$page_header <- renderUI({
+    if (current_page() == "dashboard") {
+      # Dashboard Header
+      div(class = "dashboard-header",
+          div(class = "logo", id = "logo",
+              div(class = "logo-icon", "FC"),
+              div(class = "logo-text", "FieldConektiv")
+          ),
+          div(
+            style = "display: flex; align-items: center; gap: 20px;",
+            span(style = "color: #2E7D32; font-weight: 600; font-size: 18px;", 
+                 paste("Welcome,", user_session$full_name, "!")),
+            actionButton("logout_btn", "Logout", 
+                         icon = icon("sign-out-alt"),
+                         style = "background-color: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 500;")
+          )
+      )
+    } else {
+      # Regular Header for other pages
+      div(class = "header",
+          div(class = "logo", id = "logo",
+              div(class = "logo-icon", "FC"),
+              div(class = "logo-text", "FieldConektiv")
+          ),
+          uiOutput("header_content")
+      )
+    }
+  })
+  
+  # Header content for non-dashboard pages
   output$header_content <- renderUI({
     if (current_page() == "home") {
       if (user_session$logged_in) {
@@ -746,6 +979,8 @@ server <- function(input, output, session) {
           style = "display: flex; align-items: center; gap: 20px;",
           span(style = "color: #4CAF50; font-weight: 500;", 
                paste("Welcome,", user_session$full_name)),
+          actionButton("go_to_dashboard", "Go to Dashboard", 
+                       style = "background-color: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 500;"),
           actionButton("logout_btn", "Logout", 
                        icon = icon("sign-out-alt"),
                        class = "btn-back")
@@ -926,6 +1161,188 @@ server <- function(input, output, session) {
                       
                       actionButton("go_to_login", "Back to Login", class = "btn-secondary")
                   )
+              )
+          )
+      )
+    } else if (current_page() == "dashboard") {
+      # Dashboard Page Content
+      div(class = "dashboard-container",
+          div(class = "dashboard-content",
+              div(class = "dashboard-card",
+                  h1(class = "dashboard-title", "FieldConektiv Dashboard"),
+                  p(class = "dashboard-subtitle", "Manage your land survey operations and projects efficiently"),
+                  
+                  # Navigation buttons
+                  div(class = "dashboard-nav",
+                      actionButton("nav_dashboard", 
+                                   label = div(
+                                     icon("tachometer-alt"),
+                                     "Dashboard"
+                                   ), 
+                                   class = ifelse(dashboard_tab() == "dashboard", "nav-btn active", "nav-btn")),
+                      
+                      actionButton("nav_create_survey", 
+                                   label = div(
+                                     icon("map-marked-alt"),
+                                     "Create Survey"
+                                   ), 
+                                   class = ifelse(dashboard_tab() == "create_survey", "nav-btn active", "nav-btn")),
+                      
+                      actionButton("nav_profile", 
+                                   label = div(
+                                     icon("user-circle"),
+                                     "Profile"
+                                   ), 
+                                   class = ifelse(dashboard_tab() == "profile", "nav-btn active", "nav-btn")),
+                      
+                      actionButton("nav_logout", 
+                                   label = div(
+                                     icon("sign-out-alt"),
+                                     "Logout"
+                                   ), 
+                                   class = "nav-btn")
+                  ),
+                  
+                  # Dashboard content based on selected tab
+                  if (dashboard_tab() == "dashboard") {
+                    div(
+                      # Statistics cards
+                      div(class = "dashboard-stats",
+                          div(class = "stat-card",
+                              div(class = "stat-icon", icon("map")),
+                              div(class = "stat-value", "12"),
+                              div(class = "stat-label", "Active Surveys")
+                          ),
+                          div(class = "stat-card",
+                              div(class = "stat-icon", icon("check-circle")),
+                              div(class = "stat-value", "48"),
+                              div(class = "stat-label", "Completed Projects")
+                          ),
+                          div(class = "stat-card",
+                              div(class = "stat-icon", icon("users")),
+                              div(class = "stat-value", "5"),
+                              div(class = "stat-label", "Team Members")
+                          ),
+                          div(class = "stat-card",
+                              div(class = "stat-icon", icon("calendar-alt")),
+                              div(class = "stat-value", "3"),
+                              div(class = "stat-label", "Upcoming Deadlines")
+                          )
+                      ),
+                      
+                      # Recent Activity
+                      div(class = "recent-activity",
+                          h2(class = "activity-title", "Recent Activity"),
+                          div(class = "activity-item",
+                              div(class = "activity-icon", icon("map-marker-alt")),
+                              div(class = "activity-content",
+                                  div(class = "activity-text", "New survey project 'Downtown Development' created"),
+                                  div(class = "activity-time", "2 hours ago")
+                              )
+                          ),
+                          div(class = "activity-item",
+                              div(class = "activity-icon", icon("file-upload")),
+                              div(class = "activity-content",
+                                  div(class = "activity-text", "Uploaded survey data for 'Riverside Property'"),
+                                  div(class = "activity-time", "Yesterday, 3:45 PM")
+                              )
+                          ),
+                          div(class = "activity-item",
+                              div(class = "activity-icon", icon("user-check")),
+                              div(class = "activity-content",
+                                  div(class = "activity-text", "Team member John Smith joined 'Mountain View Project'"),
+                                  div(class = "activity-time", "2 days ago")
+                              )
+                          ),
+                          div(class = "activity-item",
+                              div(class = "activity-icon", icon("chart-line")),
+                              div(class = "activity-content",
+                                  div(class = "activity-text", "Monthly report generated and sent to client"),
+                                  div(class = "activity-time", "3 days ago")
+                              )
+                          ),
+                          div(class = "activity-item",
+                              div(class = "activity-icon", icon("tools")),
+                              div(class = "activity-content",
+                                  div(class = "activity-text", "Updated equipment calibration settings"),
+                                  div(class = "activity-time", "1 week ago")
+                              )
+                          )
+                      )
+                    )
+                  } else if (dashboard_tab() == "create_survey") {
+                    div(
+                      h2("Create New Survey", style = "color: #1B5E20; margin-bottom: 25px;"),
+                      div(class = "form-group",
+                          tags$label(class = "form-label", `for` = "survey-name", "Survey Name"),
+                          textInput("survey_name", label = NULL, placeholder = "Enter survey project name")
+                      ),
+                      div(class = "form-group",
+                          tags$label(class = "form-label", `for` = "survey-location", "Location"),
+                          textInput("survey_location", label = NULL, placeholder = "Enter survey location")
+                      ),
+                      div(class = "form-group",
+                          tags$label(class = "form-label", `for` = "survey-type", "Survey Type"),
+                          selectInput("survey_type", label = NULL,
+                                      choices = c("Topographic Survey" = "topographic",
+                                                  "Boundary Survey" = "boundary",
+                                                  "Construction Survey" = "construction",
+                                                  "Hydrographic Survey" = "hydrographic",
+                                                  "Other" = "other"))
+                      ),
+                      div(class = "form-group",
+                          tags$label(class = "form-label", `for` = "survey-description", "Description"),
+                          textAreaInput("survey_description", label = NULL, placeholder = "Enter survey description...", rows = 4)
+                      ),
+                      div(class = "form-group",
+                          tags$label(class = "form-label", `for` = "survey-start-date", "Start Date"),
+                          dateInput("survey_start_date", label = NULL, value = Sys.Date())
+                      ),
+                      div(class = "form-group",
+                          tags$label(class = "form-label", `for` = "survey-team", "Team Members"),
+                          selectizeInput("survey_team", label = NULL, 
+                                         choices = c("John Smith", "Sarah Johnson", "Mike Brown", "Emily Davis", "David Wilson"),
+                                         multiple = TRUE,
+                                         options = list(placeholder = 'Select team members...'))
+                      ),
+                      actionButton("create_survey_btn", "Create Survey", class = "btn-primary",
+                                   style = "width: auto; min-width: 200px; margin-top: 20px;")
+                    )
+                  } else if (dashboard_tab() == "profile") {
+                    div(
+                      h2("User Profile", style = "color: #1B5E20; margin-bottom: 25px;"),
+                      div(class = "form-group",
+                          tags$label(class = "form-label", "Full Name"),
+                          textInput("profile_name", label = NULL, value = user_session$full_name)
+                      ),
+                      div(class = "form-group",
+                          tags$label(class = "form-label", "Email Address"),
+                          textInput("profile_email", label = NULL, value = user_session$email)
+                      ),
+                      div(class = "form-group",
+                          tags$label(class = "form-label", "Phone Number"),
+                          textInput("profile_phone", label = NULL, placeholder = "Enter your phone number")
+                      ),
+                      div(class = "form-group",
+                          tags$label(class = "form-label", "Company/Organization"),
+                          textInput("profile_company", label = NULL, placeholder = "Enter your company name")
+                      ),
+                      div(class = "form-group",
+                          tags$label(class = "form-label", "Professional Title"),
+                          textInput("profile_title", label = NULL, placeholder = "Enter your professional title")
+                      ),
+                      div(class = "form-group",
+                          tags$label(class = "form-label", "Biography"),
+                          textAreaInput("profile_bio", label = NULL, placeholder = "Tell us about yourself...", rows = 4)
+                      ),
+                      div(style = "display: flex; gap: 15px; margin-top: 30px;",
+                          actionButton("update_profile", "Update Profile", class = "btn-primary",
+                                       style = "width: auto; min-width: 150px;"),
+                          actionButton("change_password", "Change Password", class = "btn-secondary",
+                                       style = "width: auto; min-width: 150px;")
+                      )
+                    )
+                  }
               )
           )
       )
@@ -1251,6 +1668,14 @@ server <- function(input, output, session) {
     current_page("home")
   })
   
+  observeEvent(input$go_to_dashboard, {
+    current_page("dashboard")
+  })
+  
+  observeEvent(input$dashboard_btn, {
+    current_page("dashboard")
+  })
+  
   # Footer link handlers
   observeEvent(input$privacy_link, {
     current_page("privacy")
@@ -1273,6 +1698,120 @@ server <- function(input, output, session) {
     current_page("privacy")
   })
   
+  # Dashboard navigation handlers
+  observeEvent(input$nav_dashboard, {
+    dashboard_tab("dashboard")
+  })
+  
+  observeEvent(input$nav_create_survey, {
+    dashboard_tab("create_survey")
+  })
+  
+  observeEvent(input$nav_profile, {
+    dashboard_tab("profile")
+  })
+  
+  observeEvent(input$nav_logout, {
+    # Logout user
+    user_session$logged_in <- FALSE
+    user_session$user_id <- NULL
+    user_session$full_name <- NULL
+    user_session$email <- NULL
+    
+    # Navigate to home
+    current_page("home")
+    
+    showNotification("You have been logged out successfully.", type = "default")
+  })
+  
+  # Create survey handler
+  observeEvent(input$create_survey_btn, {
+    survey_name <- input$survey_name
+    survey_location <- input$survey_location
+    
+    if (is.null(survey_name) || survey_name == "" || is.null(survey_location) || survey_location == "") {
+      showNotification("Please enter survey name and location.", type = "warning")
+      return()
+    }
+    
+    showNotification(
+      paste("Survey '", survey_name, "' created successfully!"),
+      type = "default",
+      duration = 5
+    )
+    
+    # Reset form
+    updateTextInput(session, "survey_name", value = "")
+    updateTextInput(session, "survey_location", value = "")
+    updateSelectInput(session, "survey_type", selected = "topographic")
+    updateTextAreaInput(session, "survey_description", value = "")
+    updateDateInput(session, "survey_start_date", value = Sys.Date())
+    updateSelectizeInput(session, "survey_team", selected = character(0))
+  })
+  
+  # Update profile handler
+  observeEvent(input$update_profile, {
+    showNotification("Profile updated successfully!", type = "default", duration = 5)
+  })
+  
+  # Change password handler
+  observeEvent(input$change_password, {
+    showModal(modalDialog(
+      title = "Change Password",
+      div(class = "form-group",
+          tags$label(class = "form-label", "Current Password"),
+          passwordInput("current_password", label = NULL, placeholder = "Enter current password")
+      ),
+      div(class = "form-group",
+          tags$label(class = "form-label", "New Password"),
+          passwordInput("new_password", label = NULL, placeholder = "Enter new password")
+      ),
+      div(class = "form-group",
+          tags$label(class = "form-label", "Confirm New Password"),
+          passwordInput("confirm_new_password", label = NULL, placeholder = "Confirm new password")
+      ),
+      footer = tagList(
+        actionButton("submit_password_change", "Change Password", class = "btn-primary"),
+        modalButton("Cancel")
+      )
+    ))
+  })
+  
+  observeEvent(input$submit_password_change, {
+    current_pass <- input$current_password
+    new_pass <- input$new_password
+    confirm_pass <- input$confirm_new_password
+    
+    if (is.null(current_pass) || current_pass == "") {
+      showNotification("Please enter your current password.", type = "warning")
+      return()
+    }
+    
+    if (is.null(new_pass) || new_pass == "") {
+      showNotification("Please enter a new password.", type = "warning")
+      return()
+    }
+    
+    if (nchar(new_pass) < 8) {
+      showNotification("New password must be at least 8 characters long.", type = "warning")
+      return()
+    }
+    
+    if (is.null(confirm_pass) || confirm_pass == "") {
+      showNotification("Please confirm your new password.", type = "warning")
+      return()
+    }
+    
+    if (new_pass != confirm_pass) {
+      showNotification("New passwords do not match.", type = "warning")
+      return()
+    }
+    
+    # In a real app, you would verify current password and update it in database
+    removeModal()
+    showNotification("Password changed successfully!", type = "default", duration = 5)
+  })
+  
   # Contact form submission
   observeEvent(input$send_message, {
     name <- input$contact_name
@@ -1291,11 +1830,9 @@ server <- function(input, output, session) {
       return()
     }
     
-    # In a real application, you would send this data to your backend
-    # For now, we'll just show a confirmation message
     showNotification(
       "Thank you for your message! Our support team will get back to you within 24 hours.",
-      type = "success",
+      type = "default",
       duration = 10
     )
     
@@ -1400,7 +1937,7 @@ server <- function(input, output, session) {
     }
   })
   
-  # Handle login button click
+  # Handle login button click - FIXED NOTIFICATION TYPE
   observeEvent(input$login_btn, {
     email <- input$login_email
     password <- input$login_password
@@ -1421,13 +1958,16 @@ server <- function(input, output, session) {
       user_session$full_name <- user$full_name
       user_session$email <- user$email
       
-      showNotification(paste("Login successful! Welcome,", user$full_name), type = "success")
+      showNotification(paste("Login successful! Welcome,", user$full_name), type = "default")
+      
+      # Navigate to dashboard immediately
+      current_page("dashboard")
     } else {
       showNotification("Invalid credentials. Please check your email and password.", type = "error")
     }
   })
   
-  # Handle create account button click
+  # Handle create account button click - FIXED NOTIFICATION TYPES
   observeEvent(input$create_account_btn, {
     # Get form values
     fullname <- input$signup_fullname
@@ -1498,7 +2038,7 @@ server <- function(input, output, session) {
       showNotification(
         paste("Account created successfully!", 
               "Welcome to FieldConektiv,", fullname, "!"),
-        type = "success",
+        type = "default",
         duration = 5
       )
       
@@ -1516,24 +2056,28 @@ server <- function(input, output, session) {
     }
   })
   
-  # Handle logout
+  # Handle logout from anywhere
   observeEvent(input$logout_btn, {
+    # Logout user
     user_session$logged_in <- FALSE
     user_session$user_id <- NULL
     user_session$full_name <- NULL
     user_session$email <- NULL
     
-    showNotification("You have been logged out successfully.", type = "info")
+    # Navigate to home
+    current_page("home")
+    
+    showNotification("You have been logged out successfully.", type = "default")
   })
   
-  # Handle dashboard button
-  observeEvent(input$dashboard_btn, {
-    showNotification("Dashboard feature coming soon!", type = "info")
-  })
-  
-  # Handle profile button
+  # Handle profile button on home page
   observeEvent(input$profile_btn, {
-    showNotification("Profile feature coming soon!", type = "info")
+    if (user_session$logged_in) {
+      current_page("dashboard")
+      dashboard_tab("profile")
+    } else {
+      showNotification("Please log in first to view your profile.", type = "warning")
+    }
   })
 }
 
