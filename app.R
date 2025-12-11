@@ -186,7 +186,7 @@ ui <- fluidPage(
         padding: 0;
       }
       
-      .landing-container, .signup-container {
+      .landing-container, .signup-container, .policy-container {
         min-height: 100vh;
         display: flex;
         flex-direction: column;
@@ -235,6 +235,13 @@ ui <- fluidPage(
         align-items: center;
         justify-content: center;
         padding: 40px 20px;
+      }
+      
+      .policy-content {
+        flex: 1;
+        padding: 40px 20px;
+        max-width: 1200px;
+        margin: 0 auto;
       }
       
       .content-wrapper {
@@ -305,11 +312,29 @@ ui <- fluidPage(
         text-align: center;
       }
       
+      .policy-card {
+        background-color: white;
+        border-radius: 16px;
+        padding: 40px;
+        box-shadow: 0 10px 30px rgba(0, 100, 0, 0.1);
+        width: 100%;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      
       .auth-title {
         font-size: 28px;
         font-weight: 600;
         color: #1B5E20;
         margin-bottom: 10px;
+      }
+      
+      .policy-title {
+        font-size: 32px;
+        font-weight: 700;
+        color: #1B5E20;
+        margin-bottom: 20px;
+        text-align: center;
       }
       
       .auth-subtitle {
@@ -437,6 +462,22 @@ ui <- fluidPage(
         border-top: 1px solid #E8F5E9;
       }
       
+      .footer-links {
+        margin-top: 10px;
+      }
+      
+      .footer-links a {
+        color: #4CAF50;
+        text-decoration: none;
+        margin: 0 10px;
+        transition: color 0.3s;
+      }
+      
+      .footer-links a:hover {
+        color: #2E7D32;
+        text-decoration: underline;
+      }
+      
       .demo-title {
         font-weight: 600;
         margin-bottom: 8px;
@@ -542,6 +583,69 @@ ui <- fluidPage(
         color: #f44336;
       }
       
+      .policy-section {
+        margin-bottom: 30px;
+      }
+      
+      .policy-section h2 {
+        color: #2E7D32;
+        font-size: 22px;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #C8E6C9;
+      }
+      
+      .policy-section h3 {
+        color: #388E3C;
+        font-size: 18px;
+        margin: 20px 0 10px 0;
+      }
+      
+      .policy-section p {
+        color: #555;
+        line-height: 1.6;
+        margin-bottom: 15px;
+      }
+      
+      .policy-section ul {
+        color: #555;
+        line-height: 1.6;
+        margin-left: 20px;
+        margin-bottom: 15px;
+      }
+      
+      .policy-section li {
+        margin-bottom: 8px;
+      }
+      
+      .contact-info {
+        background-color: #E8F5E9;
+        padding: 20px;
+        border-radius: 10px;
+        margin: 20px 0;
+      }
+      
+      .contact-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+        color: #2E7D32;
+      }
+      
+      .contact-item i {
+        color: #4CAF50;
+        font-size: 18px;
+        width: 24px;
+      }
+      
+      .contact-form {
+        background-color: #F1F8E9;
+        padding: 25px;
+        border-radius: 10px;
+        margin-top: 20px;
+      }
+      
       @media (max-width: 992px) {
         .content-wrapper {
           flex-direction: column;
@@ -552,13 +656,17 @@ ui <- fluidPage(
           font-size: 36px;
         }
         
-        .auth-card, .signup-card {
+        .auth-card, .signup-card, .policy-card {
           max-width: 100%;
           padding: 30px 20px;
         }
         
         .header {
           padding: 15px 20px;
+        }
+        
+        .policy-title {
+          font-size: 28px;
         }
       }
       
@@ -590,7 +698,7 @@ ui <- fluidPage(
   # Main UI structure
   div(
     id = "main-app",
-    # Header that appears on both pages
+    # Header that appears on all pages
     div(class = "header",
         div(class = "logo", id = "logo",
             div(class = "logo-icon", "FC"),
@@ -602,14 +710,16 @@ ui <- fluidPage(
     # Conditional main content based on current page
     uiOutput("main_content"),
     
-    # Footer that appears on both pages
+    # Footer that appears on all pages
     div(class = "footer",
-        "© 2023 FieldConektiv. All rights reserved. | ",
-        tags$a(href = "#", style = "color: #4CAF50;", "Privacy Policy"),
-        " | ",
-        tags$a(href = "#", style = "color: #4CAF50;", "Terms of Service"),
-        " | ",
-        tags$a(href = "#", style = "color: #4CAF50;", "Contact Support")
+        "© 2023 FieldConektiv. All rights reserved.",
+        div(class = "footer-links",
+            actionLink("privacy_link", "Privacy Policy", style = "color: #4CAF50;"),
+            " | ",
+            actionLink("terms_link", "Terms of Service", style = "color: #4CAF50;"),
+            " | ",
+            actionLink("contact_link", "Contact Support", style = "color: #4CAF50;")
+        )
     )
   )
 )
@@ -646,7 +756,7 @@ server <- function(input, output, session) {
           "Connecting Fields, Empowering Industries"
         )
       }
-    } else if (current_page() == "signup") {
+    } else if (current_page() %in% c("signup", "privacy", "terms", "contact")) {
       actionButton("back_to_home", "Back to Home", 
                    icon = icon("arrow-left"), 
                    class = "btn-back")
@@ -799,9 +909,9 @@ server <- function(input, output, session) {
                           tags$label(class = "form-label", `for` = "signup-terms",
                                      checkboxInput("signup_terms", label = NULL, width = "20px"),
                                      "I agree to the ",
-                                     tags$a(href = "#", style = "color: #4CAF50;", "Terms of Service"),
+                                     actionLink("signup_terms_link", "Terms of Service", style = "color: #4CAF50;"),
                                      " and ",
-                                     tags$a(href = "#", style = "color: #4CAF50;", "Privacy Policy"),
+                                     actionLink("signup_privacy_link", "Privacy Policy", style = "color: #4CAF50;"),
                                      span(class = "required", " *")
                           )
                       ),
@@ -815,6 +925,308 @@ server <- function(input, output, session) {
                       ),
                       
                       actionButton("go_to_login", "Back to Login", class = "btn-secondary")
+                  )
+              )
+          )
+      )
+    } else if (current_page() == "privacy") {
+      # Privacy Policy Page
+      div(class = "policy-container",
+          div(class = "policy-content",
+              div(class = "policy-card",
+                  h1(class = "policy-title", "Privacy Policy"),
+                  div(class = "policy-section",
+                      h2("1. Introduction"),
+                      p("Welcome to FieldConektiv. We respect your privacy and are committed to protecting your personal data. This privacy policy will inform you about how we look after your personal data when you visit our website and tell you about your privacy rights and how the law protects you."),
+                      
+                      h2("2. Data We Collect"),
+                      h3("Personal Identification Information"),
+                      p("We may collect personal identification information from Users in a variety of ways, including, but not limited to:"),
+                      tags$ul(
+                        tags$li("Full name"),
+                        tags$li("Email address"),
+                        tags$li("Phone number"),
+                        tags$li("Password (encrypted)"),
+                        tags$li("Professional credentials and certifications")
+                      ),
+                      
+                      h3("Technical Data"),
+                      p("We automatically collect certain information when you visit our website:"),
+                      tags$ul(
+                        tags$li("IP address"),
+                        tags$li("Browser type and version"),
+                        tags$li("Time zone setting and location"),
+                        tags$li("Operating system and platform"),
+                        tags$li("Other technology on the devices you use to access this website")
+                      ),
+                      
+                      h2("3. How We Use Your Data"),
+                      p("We use your personal data for the following purposes:"),
+                      tags$ul(
+                        tags$li("To create and manage your account"),
+                        tags$li("To provide and maintain our services"),
+                        tags$li("To notify you about changes to our services"),
+                        tags$li("To provide customer support"),
+                        tags$li("To gather analysis or valuable information to improve our services"),
+                        tags$li("To monitor the usage of our services"),
+                        tags$li("To detect, prevent and address technical issues")
+                      ),
+                      
+                      h2("4. Data Security"),
+                      p("We implement appropriate security measures to protect your personal data:"),
+                      tags$ul(
+                        tags$li("Password encryption using bcrypt hashing algorithm"),
+                        tags$li("Secure database connections"),
+                        tags$li("Regular security audits"),
+                        tags$li("Access controls and authentication"),
+                        tags$li("Data encryption in transit and at rest")
+                      ),
+                      
+                      h2("5. Data Retention"),
+                      p("We will retain your personal data only for as long as is necessary for the purposes set out in this privacy policy. We will retain and use your personal data to the extent necessary to comply with our legal obligations, resolve disputes, and enforce our legal agreements and policies."),
+                      
+                      h2("6. Your Rights"),
+                      p("You have the right to:"),
+                      tags$ul(
+                        tags$li("Access your personal data"),
+                        tags$li("Correct inaccurate personal data"),
+                        tags$li("Request deletion of your personal data"),
+                        tags$li("Object to processing of your personal data"),
+                        tags$li("Request transfer of your personal data"),
+                        tags$li("Withdraw consent at any time")
+                      ),
+                      
+                      h2("7. Changes to This Policy"),
+                      p("We may update our privacy policy from time to time. We will notify you of any changes by posting the new privacy policy on this page and updating the 'Last Updated' date."),
+                      
+                      h2("8. Contact Us"),
+                      p("If you have any questions about this privacy policy, please contact us:"),
+                      div(class = "contact-info",
+                          div(class = "contact-item",
+                              icon("envelope"),
+                              span("Email: privacy@fieldconektiv.com")
+                          ),
+                          div(class = "contact-item",
+                              icon("phone"),
+                              span("Phone: +1 (555) 123-4567")
+                          ),
+                          div(class = "contact-item",
+                              icon("map-marker-alt"),
+                              span("Address: 123 Tech Street, Innovation City, IC 12345")
+                          )
+                      ),
+                      
+                      p("Last Updated: December 2023")
+                  )
+              )
+          )
+      )
+    } else if (current_page() == "terms") {
+      # Terms of Service Page
+      div(class = "policy-container",
+          div(class = "policy-content",
+              div(class = "policy-card",
+                  h1(class = "policy-title", "Terms of Service"),
+                  div(class = "policy-section",
+                      h2("1. Acceptance of Terms"),
+                      p("By accessing and using FieldConektiv, you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by these terms, please do not use this service."),
+                      
+                      h2("2. Description of Service"),
+                      p("FieldConektiv provides a comprehensive platform for managing land survey operations, design works, construction works, and other related services. The service includes:"),
+                      tags$ul(
+                        tags$li("User account creation and management"),
+                        tags$li("Project management tools"),
+                        tags$li("Document storage and sharing"),
+                        tags$li("Communication tools"),
+                        tags$li("Reporting and analytics")
+                      ),
+                      
+                      h2("3. User Accounts"),
+                      h3("3.1 Account Creation"),
+                      p("To use our services, you must create an account by providing accurate and complete information. You are responsible for maintaining the confidentiality of your account and password."),
+                      
+                      h3("3.2 Account Security"),
+                      p("You agree to:"),
+                      tags$ul(
+                        tags$li("Keep your password secure and confidential"),
+                        tags$li("Notify us immediately of any unauthorized use of your account"),
+                        tags$li("Take responsibility for all activities that occur under your account")
+                      ),
+                      
+                      h3("3.3 Account Termination"),
+                      p("We reserve the right to suspend or terminate your account at any time for conduct that we believe violates these terms or is harmful to other users, us, or third parties, or for any other reason."),
+                      
+                      h2("4. User Responsibilities"),
+                      p("As a user of FieldConektiv, you agree to:"),
+                      tags$ul(
+                        tags$li("Provide accurate and complete information"),
+                        tags$li("Use the service only for lawful purposes"),
+                        tags$li("Not attempt to gain unauthorized access to the system"),
+                        tags$li("Not interfere with or disrupt the service"),
+                        tags$li("Not use the service to transmit viruses or malicious code"),
+                        tags$li("Not use the service for any fraudulent or illegal activities")
+                      ),
+                      
+                      h2("5. Intellectual Property"),
+                      p("All content included on this site, such as text, graphics, logos, button icons, images, audio clips, digital downloads, data compilations, and software, is the property of FieldConektiv or its content suppliers and protected by international copyright laws."),
+                      
+                      h2("6. Limitation of Liability"),
+                      p("FieldConektiv shall not be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from:"),
+                      tags$ul(
+                        tags$li("Your access to or use of or inability to access or use the service"),
+                        tags$li("Any conduct or content of any third party on the service"),
+                        tags$li("Any content obtained from the service"),
+                        tags$li("Unauthorized access, use or alteration of your transmissions or content")
+                      ),
+                      
+                      h2("7. Service Modifications"),
+                      p("We reserve the right to modify or discontinue, temporarily or permanently, the service (or any part thereof) with or without notice. We shall not be liable to you or to any third party for any modification, price change, suspension, or discontinuance of the service."),
+                      
+                      h2("8. Governing Law"),
+                      p("These terms shall be governed and construed in accordance with the laws of the jurisdiction in which FieldConektiv operates, without regard to its conflict of law provisions."),
+                      
+                      h2("9. Changes to Terms"),
+                      p("We reserve the right, at our sole discretion, to modify or replace these terms at any time. By continuing to access or use our service after those revisions become effective, you agree to be bound by the revised terms."),
+                      
+                      h2("10. Contact Information"),
+                      div(class = "contact-info",
+                          div(class = "contact-item",
+                              icon("envelope"),
+                              span("Email: legal@fieldconektiv.com")
+                          ),
+                          div(class = "contact-item",
+                              icon("phone"),
+                              span("Phone: +1 (555) 987-6543")
+                          ),
+                          div(class = "contact-item",
+                              icon("clock"),
+                              span("Business Hours: Mon-Fri 9:00 AM - 5:00 PM EST")
+                          )
+                      ),
+                      
+                      p("Effective Date: December 2023")
+                  )
+              )
+          )
+      )
+    } else if (current_page() == "contact") {
+      # Contact Support Page
+      div(class = "policy-container",
+          div(class = "policy-content",
+              div(class = "policy-card",
+                  h1(class = "policy-title", "Contact Support"),
+                  div(class = "policy-section",
+                      h2("Get in Touch"),
+                      p("We're here to help! Choose from the following options to get support:"),
+                      
+                      h2("Contact Information"),
+                      div(class = "contact-info",
+                          h3("General Inquiries"),
+                          div(class = "contact-item",
+                              icon("envelope"),
+                              span("Email: info@fieldconektiv.com")
+                          ),
+                          div(class = "contact-item",
+                              icon("phone"),
+                              span("Phone: +1 (800) 555-FIELD")
+                          ),
+                          
+                          h3("Technical Support"),
+                          div(class = "contact-item",
+                              icon("envelope"),
+                              span("Email: support@fieldconektiv.com")
+                          ),
+                          div(class = "contact-item",
+                              icon("phone"),
+                              span("Phone: +1 (800) 555-TECH")
+                          ),
+                          
+                          h3("Billing Department"),
+                          div(class = "contact-item",
+                              icon("envelope"),
+                              span("Email: billing@fieldconektiv.com")
+                          ),
+                          div(class = "contact-item",
+                              icon("phone"),
+                              span("Phone: +1 (800) 555-BILL")
+                          ),
+                          
+                          h3("Headquarters"),
+                          div(class = "contact-item",
+                              icon("map-marker-alt"),
+                              span("FieldConektiv Inc.")
+                          ),
+                          div(class = "contact-item",
+                              icon(""),
+                              span("123 Technology Drive")
+                          ),
+                          div(class = "contact-item",
+                              icon(""),
+                              span("Suite 500")
+                          ),
+                          div(class = "contact-item",
+                              icon(""),
+                              span("San Francisco, CA 94107")
+                          ),
+                          div(class = "contact-item",
+                              icon(""),
+                              span("United States")
+                          )
+                      ),
+                      
+                      h2("Business Hours"),
+                      p("Our support teams are available during the following hours:"),
+                      tags$ul(
+                        tags$li("Monday - Friday: 8:00 AM - 8:00 PM EST"),
+                        tags$li("Saturday: 9:00 AM - 5:00 PM EST"),
+                        tags$li("Sunday: 10:00 AM - 4:00 PM EST"),
+                        tags$li("Emergency Support: 24/7 for critical issues")
+                      ),
+                      
+                      h2("Send Us a Message"),
+                      div(class = "contact-form",
+                          p("Fill out the form below and we'll get back to you within 24 hours."),
+                          div(class = "form-group",
+                              tags$label(class = "form-label", `for` = "contact-name", "Your Name"),
+                              textInput("contact_name", label = NULL, placeholder = "Enter your name")
+                          ),
+                          div(class = "form-group",
+                              tags$label(class = "form-label", `for` = "contact-email", "Email Address"),
+                              textInput("contact_email", label = NULL, placeholder = "Enter your email")
+                          ),
+                          div(class = "form-group",
+                              tags$label(class = "form-label", `for` = "contact-subject", "Subject"),
+                              textInput("contact_subject", label = NULL, placeholder = "Enter subject")
+                          ),
+                          div(class = "form-group",
+                              tags$label(class = "form-label", `for` = "contact-message", "Message"),
+                              textAreaInput("contact_message", label = NULL, placeholder = "Type your message here...", rows = 5)
+                          ),
+                          div(class = "form-group",
+                              tags$label(class = "form-label", `for` = "contact-urgency", "Urgency Level"),
+                              selectInput("contact_urgency", label = NULL,
+                                          choices = c("Low" = "low", 
+                                                      "Medium" = "medium", 
+                                                      "High" = "high", 
+                                                      "Critical" = "critical"),
+                                          selected = "medium")
+                          ),
+                          actionButton("send_message", "Send Message", class = "btn-primary",
+                                       style = "width: auto; min-width: 200px;")
+                      ),
+                      
+                      h2("Frequently Asked Questions"),
+                      h3("How quickly will I get a response?"),
+                      p("We typically respond to all inquiries within 24 hours during business days. Emergency support requests are addressed immediately."),
+                      
+                      h3("Do you offer phone support?"),
+                      p("Yes, we offer phone support during business hours. For urgent matters outside business hours, please use the emergency contact number provided in your account dashboard."),
+                      
+                      h3("Can I schedule a demo?"),
+                      p("Absolutely! Contact our sales team at demo@fieldconektiv.com to schedule a personalized demo of our platform."),
+                      
+                      h3("Where can I find documentation?"),
+                      p("Visit our documentation portal at docs.fieldconektiv.com for user guides, API documentation, and troubleshooting articles.")
                   )
               )
           )
@@ -837,6 +1249,62 @@ server <- function(input, output, session) {
   
   observeEvent(input$logo, {
     current_page("home")
+  })
+  
+  # Footer link handlers
+  observeEvent(input$privacy_link, {
+    current_page("privacy")
+  })
+  
+  observeEvent(input$terms_link, {
+    current_page("terms")
+  })
+  
+  observeEvent(input$contact_link, {
+    current_page("contact")
+  })
+  
+  # Signup form link handlers
+  observeEvent(input$signup_terms_link, {
+    current_page("terms")
+  })
+  
+  observeEvent(input$signup_privacy_link, {
+    current_page("privacy")
+  })
+  
+  # Contact form submission
+  observeEvent(input$send_message, {
+    name <- input$contact_name
+    email <- input$contact_email
+    subject <- input$contact_subject
+    message <- input$contact_message
+    
+    if (is.null(name) || name == "" || is.null(email) || email == "" || 
+        is.null(subject) || subject == "" || is.null(message) || message == "") {
+      showNotification("Please fill in all fields before sending your message.", type = "warning")
+      return()
+    }
+    
+    if (!grepl("^[^@]+@[^@]+\\.[^@]+$", email)) {
+      showNotification("Please enter a valid email address.", type = "warning")
+      return()
+    }
+    
+    # In a real application, you would send this data to your backend
+    # For now, we'll just show a confirmation message
+    showNotification(
+      "Thank you for your message! Our support team will get back to you within 24 hours.",
+      type = "success",
+      duration = 10
+    )
+    
+    # Reset the form
+    updateTextInput(session, "contact_name", value = "")
+    updateTextInput(session, "contact_email", value = "")
+    updateTextInput(session, "contact_subject", value = "")
+    updateTextAreaInput(session, "contact_message", value = "")
+    updateSelectInput(session, "contact_urgency", selected = "medium")
   })
   
   # Password toggle functionality
@@ -953,7 +1421,7 @@ server <- function(input, output, session) {
       user_session$full_name <- user$full_name
       user_session$email <- user$email
       
-      showNotification(paste("Login successful! Welcome,", user$full_name), type = "default")
+      showNotification(paste("Login successful! Welcome,", user$full_name), type = "success")
     } else {
       showNotification("Invalid credentials. Please check your email and password.", type = "error")
     }
@@ -1030,7 +1498,7 @@ server <- function(input, output, session) {
       showNotification(
         paste("Account created successfully!", 
               "Welcome to FieldConektiv,", fullname, "!"),
-        type = "default",
+        type = "success",
         duration = 5
       )
       
@@ -1055,17 +1523,17 @@ server <- function(input, output, session) {
     user_session$full_name <- NULL
     user_session$email <- NULL
     
-    showNotification("You have been logged out successfully.", type = "default")
+    showNotification("You have been logged out successfully.", type = "info")
   })
   
   # Handle dashboard button
   observeEvent(input$dashboard_btn, {
-    showNotification("Dashboard feature coming soon!", type = "default")
+    showNotification("Dashboard feature coming soon!", type = "info")
   })
   
   # Handle profile button
   observeEvent(input$profile_btn, {
-    showNotification("Profile feature coming soon!", type = "default")
+    showNotification("Profile feature coming soon!", type = "info")
   })
 }
 
