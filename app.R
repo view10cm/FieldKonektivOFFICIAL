@@ -911,9 +911,9 @@ ui <- fluidPage(
       
       /* Survey form container */
       .survey-form-container {
-        max-width: 800px;
+        max-width: 1000px;
         margin: 0 auto;
-        padding: 30px;
+        padding: 20px;
       }
       
       .survey-back-btn {
@@ -934,6 +934,83 @@ ui <- fluidPage(
       
       .survey-back-btn:hover {
         background-color: #E8F5E9;
+      }
+      
+      /* NEW STYLES FOR RELOCATION SURVEY FORM */
+      .survey-section {
+        background-color: white;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 15px rgba(0, 100, 0, 0.05);
+        border: 1px solid #E8F5E9;
+      }
+      
+      .survey-section h3 {
+        color: #2E7D32;
+        font-size: 20px;
+        font-weight: 600;
+        margin-top: 0;
+      }
+      
+      .file-input-container {
+        border: 2px dashed #C8E6C9;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+        background-color: #F9FFF9;
+        transition: all 0.3s;
+      }
+      
+      .file-input-container:hover {
+        border-color: #4CAF50;
+        background-color: #F1F8E9;
+      }
+      
+      .file-input-container .btn-file {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+      
+      .file-input-container .btn-file:hover {
+        background-color: #388E3C;
+      }
+      
+      .required-field::after {
+        content: ' *';
+        color: #f44336;
+        font-weight: bold;
+      }
+      
+      .conditional-documents {
+        background-color: #F1F8E9;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 15px 0;
+        border-left: 4px solid #4CAF50;
+      }
+      
+      .conditional-documents h4 {
+        color: #388E3C;
+        margin-top: 0;
+        margin-bottom: 15px;
+        font-size: 18px;
+      }
+      
+      .document-note {
+        background-color: #FFF8E1;
+        border-radius: 6px;
+        padding: 10px 15px;
+        margin: 10px 0;
+        font-size: 14px;
+        color: #795548;
+        border-left: 3px solid #FFB300;
       }
       
       @media (max-width: 992px) {
@@ -992,6 +1069,14 @@ ui <- fluidPage(
         .survey-title {
           font-size: 22px;
         }
+        
+        .survey-form-container {
+          padding: 15px;
+        }
+        
+        .survey-section {
+          padding: 20px;
+        }
       }
       
       @media (max-width: 768px) {
@@ -1025,6 +1110,15 @@ ui <- fluidPage(
         
         .survey-desc {
           font-size: 13px;
+        }
+        
+        .survey-section h3 {
+          font-size: 18px;
+        }
+        
+        .survey-back-btn {
+          padding: 10px 20px;
+          font-size: 14px;
         }
       }
       
@@ -1426,7 +1520,7 @@ server <- function(input, output, session) {
                       )
                     )
                   } else if (dashboard_tab() == "create_survey") {
-                    # NEW: Survey type selection buttons
+                    # Survey type selection buttons
                     if (is.null(selected_survey_type())) {
                       div(
                         h2("Select Survey Type", style = "color: #1B5E20; margin-bottom: 25px; text-align: center;"),
@@ -1467,8 +1561,321 @@ server <- function(input, output, session) {
                                          class = "survey-btn topography-btn")
                         )
                       )
+                    } else if (selected_survey_type() == "Relocation") {
+                      # Relocation Survey Form
+                      div(class = "survey-form-container",
+                          actionButton("back_to_survey_types", "← Back to Survey Types", 
+                                       class = "survey-back-btn"),
+                          
+                          h2("Relocation Survey Request Form", 
+                             style = "color: #1B5E20; margin-bottom: 25px; text-align: center;"),
+                          p("Please fill out all required fields for your relocation survey request.", 
+                            style = "color: #666; margin-bottom: 30px; text-align: center;"),
+                          
+                          # A. Personal Information Section
+                          div(class = "survey-section",
+                              h3("A. Personal Information", 
+                                 style = "color: #2E7D32; border-bottom: 2px solid #C8E6C9; padding-bottom: 10px; margin-bottom: 20px;"),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "full_name", 
+                                             span("Full Name", span(class = "required", "*"))),
+                                  textInput("relocation_full_name", label = NULL, placeholder = "Enter your full name")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "government_id_type", 
+                                             span("Valid Government-Issued ID Type", span(class = "required", "*"))),
+                                  selectInput("government_id_type", label = NULL,
+                                              choices = c("Select ID type..." = "",
+                                                          "Philippine Passport" = "passport",
+                                                          "Driver's License" = "driver_license",
+                                                          "UMID" = "umid",
+                                                          "PRC ID" = "prc_id",
+                                                          "Voter's ID" = "voter_id"),
+                                              selected = "")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "government_id_image", 
+                                             span("Government ID Image", span(class = "required", "*"))),
+                                  fileInput("government_id_image", label = NULL, 
+                                            accept = c("image/png", "image/jpeg", "image/jpg", "application/pdf"),
+                                            buttonLabel = "Browse...",
+                                            placeholder = "Upload image/scan of your government ID")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "applicant_full_name", 
+                                             span("Applicant Full Name", span(class = "required", "*"))),
+                                  textInput("applicant_full_name", label = NULL, placeholder = "Enter applicant's full name")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "special_power_attorney", 
+                                             span("Special Power of Attorney (If different from above)")),
+                                  fileInput("special_power_attorney", label = NULL,
+                                            accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                            buttonLabel = "Browse...",
+                                            placeholder = "Upload Special Power of Attorney document")
+                              ),
+                              
+                              div(class = "document-note",
+                                  tags$b("Note:"), " Special Power of Attorney is only required if the Applicant Full Name is different from the Full Name above.")
+                          ),
+                          
+                          # B. Essential Ownership Section
+                          div(class = "survey-section",
+                              h3("B. Essential Ownership Documents", 
+                                 style = "color: #2E7D32; border-bottom: 2px solid #C8E6C9; padding-bottom: 10px; margin-bottom: 20px;"),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "land_title_status", 
+                                             span("Land Title Status", span(class = "required", "*"))),
+                                  selectInput("land_title_status", label = NULL,
+                                              choices = c("Select status..." = "",
+                                                          "Available" = "available",
+                                                          "Lost" = "lost",
+                                                          "Untitled" = "untitled",
+                                                          "Inheritance" = "inheritance"),
+                                              selected = "")
+                              ),
+                              
+                              # Conditional panels based on land title status
+                              # Available Title Documents
+                              conditionalPanel(
+                                condition = "input.land_title_status == 'available'",
+                                div(class = "conditional-documents",
+                                    h4("Required Documents for Available Title:"),
+                                    div(class = "form-group",
+                                        tags$label(class = "form-label", `for` = "original_title", 
+                                                   span("Original Certificate of Title / Transfer Certificate of Title", span(class = "required", "*"))),
+                                        fileInput("original_title", label = NULL,
+                                                  accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                                  buttonLabel = "Browse...",
+                                                  placeholder = "Upload Title document")
+                                    )
+                                )
+                              ),
+                              
+                              # Lost Title Documents
+                              conditionalPanel(
+                                condition = "input.land_title_status == 'lost'",
+                                div(class = "conditional-documents",
+                                    h4("Required Documents for Lost Title:"),
+                                    div(class = "form-group",
+                                        tags$label(class = "form-label", `for` = "ctc_title", 
+                                                   span("CTC of Title from Register of Deeds", span(class = "required", "*"))),
+                                        fileInput("ctc_title", label = NULL,
+                                                  accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                                  buttonLabel = "Browse...",
+                                                  placeholder = "Upload CTC document")
+                                    ),
+                                    div(class = "form-group",
+                                        tags$label(class = "form-label", `for` = "owners_duplicate", 
+                                                   span("Owner's Duplicate Copy of Title", span(class = "required", "*"))),
+                                        fileInput("owners_duplicate", label = NULL,
+                                                  accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                                  buttonLabel = "Browse...",
+                                                  placeholder = "Upload Owner's Duplicate document")
+                                    ),
+                                    div(class = "form-group",
+                                        tags$label(class = "form-label", `for` = "tax_declaration_lost", 
+                                                   span("Tax Declaration", span(class = "required", "*"))),
+                                        fileInput("tax_declaration_lost", label = NULL,
+                                                  accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                                  buttonLabel = "Browse...",
+                                                  placeholder = "Upload Tax Declaration")
+                                    )
+                                )
+                              ),
+                              
+                              # Untitled Documents
+                              conditionalPanel(
+                                condition = "input.land_title_status == 'untitled'",
+                                div(class = "conditional-documents",
+                                    h4("Required Documents for Untitled Land:"),
+                                    div(class = "form-group",
+                                        tags$label(class = "form-label", `for` = "deed_conveyance", 
+                                                   span("Deed of Absolute Sale / Extrajudicial Settlement / Other Notarized Deeds", span(class = "required", "*"))),
+                                        fileInput("deed_conveyance", label = NULL,
+                                                  accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                                  buttonLabel = "Browse...",
+                                                  placeholder = "Upload Deed document")
+                                    ),
+                                    div(class = "form-group",
+                                        tags$label(class = "form-label", `for` = "tax_declaration_untitled", 
+                                                   span("Tax Declaration under your Name", span(class = "required", "*"))),
+                                        fileInput("tax_declaration_untitled", label = NULL,
+                                                  accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                                  buttonLabel = "Browse...",
+                                                  placeholder = "Upload Tax Declaration")
+                                    ),
+                                    div(class = "form-group",
+                                        tags$label(class = "form-label", `for` = "tax_clearance", 
+                                                   span("Tax Clearance / Official Receipt of Real Property Tax", span(class = "required", "*"))),
+                                        fileInput("tax_clearance", label = NULL,
+                                                  accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                                  buttonLabel = "Browse...",
+                                                  placeholder = "Upload Tax Clearance/Receipt")
+                                    )
+                                )
+                              ),
+                              
+                              # Inheritance Documents
+                              conditionalPanel(
+                                condition = "input.land_title_status == 'inheritance'",
+                                div(class = "conditional-documents",
+                                    h4("Required Documents for Inherited Land:"),
+                                    div(class = "form-group",
+                                        tags$label(class = "form-label", `for` = "estate_settlement", 
+                                                   span("Extrajudicial Settlement of Estate / Court Order", span(class = "required", "*"))),
+                                        fileInput("estate_settlement", label = NULL,
+                                                  accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                                  buttonLabel = "Browse...",
+                                                  placeholder = "Upload Estate Settlement/Court Order")
+                                    ),
+                                    div(class = "form-group",
+                                        tags$label(class = "form-label", `for` = "affidavit_adjudication", 
+                                                   span("Affidavit of Self-Adjudication", span(class = "required", "*"))),
+                                        fileInput("affidavit_adjudication", label = NULL,
+                                                  accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                                  buttonLabel = "Browse...",
+                                                  placeholder = "Upload Affidavit of Self-Adjudication")
+                                    ),
+                                    div(class = "form-group",
+                                        tags$label(class = "form-label", `for` = "death_certificate", 
+                                                   span("Death Certificate of the deceased owner", span(class = "required", "*"))),
+                                        fileInput("death_certificate", label = NULL,
+                                                  accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                                  buttonLabel = "Browse...",
+                                                  placeholder = "Upload Death Certificate")
+                                    )
+                                )
+                              )
+                          ),
+                          
+                          # C. Required Clearances Section
+                          div(class = "survey-section",
+                              h3("C. Required Clearances", 
+                                 style = "color: #2E7D32; border-bottom: 2px solid #C8E6C9; padding-bottom: 10px; margin-bottom: 20px;"),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "barangay_clearance", 
+                                             span("Barangay Clearance", span(class = "required", "*"))),
+                                  fileInput("barangay_clearance", label = NULL,
+                                            accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                            buttonLabel = "Browse...",
+                                            placeholder = "Upload Barangay Clearance")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "tax_delinquency_cert", 
+                                             span("Certificate of Tax Delinquency", span(class = "required", "*"))),
+                                  fileInput("tax_delinquency_cert", label = NULL,
+                                            accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                            buttonLabel = "Browse...",
+                                            placeholder = "Upload Certificate of Tax Delinquency")
+                              )
+                          ),
+                          
+                          # D. Technical Property Information Section
+                          div(class = "survey-section",
+                              h3("D. Technical Property Information", 
+                                 style = "color: #2E7D32; border-bottom: 2px solid #C8E6C9; padding-bottom: 10px; margin-bottom: 20px;"),
+                              
+                              div(style = "display: grid; grid-template-columns: 1fr 1fr; gap: 20px;",
+                                  div(class = "form-group",
+                                      tags$label(class = "form-label", `for` = "block_number", 
+                                                 span("Block Number", span(class = "required", "*"))),
+                                      numericInput("block_number", label = NULL, value = NULL, min = 1, step = 1)
+                                  ),
+                                  
+                                  div(class = "form-group",
+                                      tags$label(class = "form-label", `for` = "lot_number", 
+                                                 span("Lot Number", span(class = "required", "*"))),
+                                      numericInput("lot_number", label = NULL, value = NULL, min = 1, step = 1)
+                                  )
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "subdivision_name", 
+                                             span("Subdivision Name (Optional)")),
+                                  textInput("subdivision_name", label = NULL, placeholder = "Enter subdivision name if applicable")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "area", 
+                                             span("Area", span(class = "required", "*"))),
+                                  div(style = "display: flex; gap: 10px;",
+                                      numericInput("area", label = NULL, value = NULL, min = 0, step = 0.01, width = "70%"),
+                                      selectInput("area_unit", label = NULL, 
+                                                  choices = c("Square Meters" = "sqm",
+                                                              "Hectares" = "hectares",
+                                                              "Acres" = "acres",
+                                                              "Square Feet" = "sqft"),
+                                                  selected = "sqm", width = "30%")
+                                  )
+                              )
+                          ),
+                          
+                          # Additional Information Section
+                          div(class = "survey-section",
+                              h3("Additional Information", 
+                                 style = "color: #2E7D32; border-bottom: 2px solid #C8E6C9; padding-bottom: 10px; margin-bottom: 20px;"),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "contact_phone", 
+                                             span("Contact Phone Number", span(class = "required", "*"))),
+                                  textInput("contact_phone", label = NULL, placeholder = "Enter your contact phone number")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "contact_email", 
+                                             span("Contact Email Address", span(class = "required", "*"))),
+                                  textInput("contact_email", label = NULL, placeholder = "Enter your email address")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "survey_reason", 
+                                             span("Reason for Relocation Survey", span(class = "required", "*"))),
+                                  textAreaInput("survey_reason", label = NULL, 
+                                                placeholder = "Please describe the reason for requesting this relocation survey...", 
+                                                rows = 4)
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "additional_notes", 
+                                             span("Additional Notes (Optional)")),
+                                  textAreaInput("additional_notes", label = NULL, 
+                                                placeholder = "Any additional information or special requirements...", 
+                                                rows = 3)
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "survey_urgency", 
+                                             span("Urgency Level")),
+                                  selectInput("survey_urgency", label = NULL,
+                                              choices = c("Normal (2-4 weeks)" = "normal",
+                                                          "High Priority (1-2 weeks)" = "high",
+                                                          "Urgent (3-7 days)" = "urgent",
+                                                          "Emergency (1-3 days)" = "emergency"),
+                                              selected = "normal")
+                              )
+                          ),
+                          
+                          # Form submission buttons
+                          div(style = "display: flex; gap: 15px; margin-top: 40px; padding-top: 20px; border-top: 2px solid #E8F5E9;",
+                              actionButton("submit_relocation_survey", "Submit Relocation Survey Request", 
+                                           class = "btn-primary",
+                                           style = "width: auto; min-width: 250px; flex: 1;"),
+                              actionButton("clear_relocation_form", "Clear Form", 
+                                           class = "btn-secondary",
+                                           style = "width: auto; min-width: 150px;")
+                          )
+                      )
                     } else {
-                      # Survey form for selected type
+                      # Original survey form for other survey types
                       div(class = "survey-form-container",
                           actionButton("back_to_survey_types", "← Back to Survey Types", 
                                        class = "survey-back-btn"),
@@ -1987,7 +2394,7 @@ server <- function(input, output, session) {
     selected_survey_type(NULL)
   })
   
-  # Create survey handler - UPDATED
+  # Create survey handler for other survey types
   observeEvent(input$create_survey_btn, {
     # Get form values
     surveyor_name <- input$surveyor_name
@@ -2049,29 +2456,122 @@ server <- function(input, output, session) {
     # Reset form and go back to survey types
     shinyjs::reset("survey-form")
     selected_survey_type(NULL)
-    
-    # In a real application, you would save this data to the database
-    # For example:
-    # con <- connect_to_db()
-    # if (!is.null(con)) {
-    #   query <- sprintf("INSERT INTO surveys (survey_type, surveyor_name, start_date, reason, client_name, property_address, property_size, size_unit, urgency, additional_notes, user_id) VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d)",
-    #                    dbEscapeStrings(con, survey_type),
-    #                    dbEscapeStrings(con, surveyor_name),
-    #                    format(start_date, "%Y-%m-%d"),
-    #                    dbEscapeStrings(con, survey_reason),
-    #                    dbEscapeStrings(con, client_name),
-    #                    dbEscapeStrings(con, property_address),
-    #                    dbEscapeStrings(con, property_size),
-    #                    dbEscapeStrings(con, size_unit),
-    #                    dbEscapeStrings(con, survey_urgency),
-    #                    dbEscapeStrings(con, additional_notes),
-    #                    user_session$user_id)
-    #   dbExecute(con, query)
-    #   dbDisconnect(con)
-    # }
   })
   
-  # Clear form handler
+  # Handle Relocation Survey submission
+  observeEvent(input$submit_relocation_survey, {
+    # Validate required fields
+    required_fields <- list(
+      "Full Name" = input$relocation_full_name,
+      "Government ID Type" = input$government_id_type,
+      "Government ID Image" = input$government_id_image,
+      "Applicant Full Name" = input$applicant_full_name,
+      "Land Title Status" = input$land_title_status,
+      "Block Number" = input$block_number,
+      "Lot Number" = input$lot_number,
+      "Area" = input$area,
+      "Contact Phone" = input$contact_phone,
+      "Contact Email" = input$contact_email,
+      "Survey Reason" = input$survey_reason,
+      "Barangay Clearance" = input$barangay_clearance,
+      "Tax Delinquency Certificate" = input$tax_delinquency_cert
+    )
+    
+    missing_fields <- c()
+    for (field_name in names(required_fields)) {
+      value <- required_fields[[field_name]]
+      if (is.null(value) || (is.character(value) && value == "") || 
+          (is.numeric(value) && is.na(value))) {
+        missing_fields <- c(missing_fields, field_name)
+      }
+    }
+    
+    if (length(missing_fields) > 0) {
+      showNotification(
+        paste("Please fill in all required fields:", 
+              paste(missing_fields, collapse = ", ")),
+        type = "warning",
+        duration = 10
+      )
+      return()
+    }
+    
+    # Validate conditional documents based on land title status
+    title_status <- input$land_title_status
+    
+    if (title_status == "available") {
+      if (is.null(input$original_title)) {
+        showNotification("Please upload the Original Certificate of Title for Available land.", 
+                         type = "warning", duration = 10)
+        return()
+      }
+    } else if (title_status == "lost") {
+      if (is.null(input$ctc_title) || is.null(input$owners_duplicate) || is.null(input$tax_declaration_lost)) {
+        showNotification("Please upload all required documents for Lost title.", 
+                         type = "warning", duration = 10)
+        return()
+      }
+    } else if (title_status == "untitled") {
+      if (is.null(input$deed_conveyance) || is.null(input$tax_declaration_untitled) || is.null(input$tax_clearance)) {
+        showNotification("Please upload all required documents for Untitled land.", 
+                         type = "warning", duration = 10)
+        return()
+      }
+    } else if (title_status == "inheritance") {
+      if (is.null(input$estate_settlement) || is.null(input$affidavit_adjudication) || is.null(input$death_certificate)) {
+        showNotification("Please upload all required documents for Inherited land.", 
+                         type = "warning", duration = 10)
+        return()
+      }
+    }
+    
+    # Validate email format
+    if (!grepl("^[^@]+@[^@]+\\.[^@]+$", input$contact_email)) {
+      showNotification("Please enter a valid email address.", type = "warning")
+      return()
+    }
+    
+    # All validation passed - show success message
+    showNotification(
+      HTML(paste(
+        "<h4>Relocation Survey Request Submitted Successfully!</h4>",
+        "<p><strong>Reference Number:</strong> RELOC-", 
+        format(Sys.time(), "%Y%m%d%H%M%S"), "</p>",
+        "<p><strong>Applicant:</strong> ", input$applicant_full_name, "</p>",
+        "<p><strong>Land Title Status:</strong> ", tools::toTitleCase(title_status), "</p>",
+        "<p>We will review your documents and contact you within 3 business days.</p>"
+      )),
+      type = "success",
+      duration = 15
+    )
+    
+    # Reset form and return to survey types
+    shinyjs::reset("relocation-survey-form")
+    selected_survey_type(NULL)
+  })
+  
+  # Handle clearing the Relocation Survey form
+  observeEvent(input$clear_relocation_form, {
+    # Reset all inputs in the relocation form
+    updateTextInput(session, "relocation_full_name", value = "")
+    updateSelectInput(session, "government_id_type", selected = "")
+    updateTextInput(session, "applicant_full_name", value = "")
+    updateSelectInput(session, "land_title_status", selected = "")
+    updateNumericInput(session, "block_number", value = NULL)
+    updateNumericInput(session, "lot_number", value = NULL)
+    updateTextInput(session, "subdivision_name", value = "")
+    updateNumericInput(session, "area", value = NULL)
+    updateSelectInput(session, "area_unit", selected = "sqm")
+    updateTextInput(session, "contact_phone", value = "")
+    updateTextInput(session, "contact_email", value = "")
+    updateTextAreaInput(session, "survey_reason", value = "")
+    updateTextAreaInput(session, "additional_notes", value = "")
+    updateSelectInput(session, "survey_urgency", selected = "normal")
+    
+    showNotification("Form cleared successfully.", type = "default", duration = 3)
+  })
+  
+  # Clear form handler for other survey types
   observeEvent(input$clear_survey_form, {
     updateTextInput(session, "surveyor_name", value = "")
     updateDateInput(session, "survey_start_date", value = Sys.Date())
