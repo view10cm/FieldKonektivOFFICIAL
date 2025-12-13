@@ -1070,6 +1070,10 @@ ui <- fluidPage(
           font-size: 22px;
         }
         
+        .survey-desc {
+          font-size: 14px;
+        }
+        
         .survey-form-container {
           padding: 15px;
         }
@@ -2533,81 +2537,312 @@ server <- function(input, output, session) {
                           )
                       )
                     } else if (selected_survey_type() == "Topography") {
-                      # Original survey form for other survey types
+                      # Topography Survey Form
                       div(class = "survey-form-container",
                           actionButton("back_to_survey_types", "← Back to Survey Types", 
                                        class = "survey-back-btn"),
                           
-                          h2(paste(selected_survey_type(), "Survey Request"), 
-                             style = "color: #1B5E20; margin-bottom: 25px;"),
-                          p("Fill out the form below to submit your survey request.", 
-                            style = "color: #666; margin-bottom: 30px;"),
+                          h2("Topography Survey Request Form", 
+                             style = "color: #1B5E20; margin-bottom: 25px; text-align: center;"),
+                          p("Please fill out all required fields for your topography survey request.", 
+                            style = "color: #666; margin-bottom: 30px; text-align: center;"),
                           
-                          # Survey Form
-                          div(class = "form-group",
-                              tags$label(class = "form-label", `for` = "surveyor-name", 
-                                         span("Surveyor Name", span(class = "required", "*"))),
-                              textInput("surveyor_name", label = NULL, placeholder = "Enter surveyor's full name")
-                          ),
-                          
-                          div(class = "form-group",
-                              tags$label(class = "form-label", `for` = "survey-start-date", 
-                                         span("Start Date", span(class = "required", "*"))),
-                              dateInput("survey_start_date", label = NULL, value = Sys.Date())
-                          ),
-                          
-                          div(class = "form-group",
-                              tags$label(class = "form-label", `for` = "survey-reason", 
-                                         span("Reason for getting Survey", span(class = "required", "*"))),
-                              textAreaInput("survey_reason", label = NULL, 
-                                            placeholder = "Describe the purpose and reason for this survey...", 
-                                            rows = 4)
-                          ),
-                          
-                          div(class = "form-group",
-                              tags$label(class = "form-label", `for` = "client-name", "Client Name (Optional)"),
-                              textInput("client_name", label = NULL, placeholder = "Enter client's name")
-                          ),
-                          
-                          div(class = "form-group",
-                              tags$label(class = "form-label", `for` = "property-address", "Property Address (Optional)"),
-                              textInput("property_address", label = NULL, placeholder = "Enter property address")
-                          ),
-                          
-                          div(class = "form-group",
-                              tags$label(class = "form-label", `for` = "property-size", "Property Size (Optional)"),
-                              div(style = "display: flex; gap: 10px;",
-                                  textInput("property_size", label = NULL, placeholder = "Enter size", width = "70%"),
-                                  selectInput("size_unit", label = NULL, 
-                                              choices = c("Square Meters" = "sqm",
-                                                          "Hectares" = "hectares",
-                                                          "Acres" = "acres",
-                                                          "Square Feet" = "sqft"),
-                                              width = "30%")
+                          # A. Basic Project Information Section
+                          div(class = "survey-section",
+                              h3("A. Basic Project Information", 
+                                 style = "color: #2E7D32; border-bottom: 2px solid #C8E6C9; padding-bottom: 10px; margin-bottom: 20px;"),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "topo_project_title", 
+                                             span("Project Title / Purpose of Topo Survey", span(class = "required", "*"))),
+                                  textInput("topo_project_title", label = NULL, 
+                                            placeholder = "e.g., 'For Building Permit', 'For Road Design', 'For Site Development'")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "topo_client_name", 
+                                             span("Client Name", span(class = "required", "*"))),
+                                  textInput("topo_client_name", label = NULL, placeholder = "Enter client's full name")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "topo_project_location", 
+                                             span("Project Location", span(class = "required", "*"))),
+                                  textInput("topo_project_location", label = NULL, placeholder = "Enter complete project address")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "topo_survey_area", 
+                                             span("Estimated Survey Area", span(class = "required", "*"))),
+                                  div(style = "display: flex; gap: 10px;",
+                                      numericInput("topo_survey_area", label = NULL, value = NULL, min = 0, step = 0.01, width = "70%"),
+                                      selectInput("topo_area_unit", label = NULL, 
+                                                  choices = c("Square Meters" = "sqm",
+                                                              "Hectares" = "hectares",
+                                                              "Acres" = "acres",
+                                                              "Square Feet" = "sqft"),
+                                                  selected = "sqm", width = "30%")
+                                  )
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "topo_required_accuracy", 
+                                             span("Required Accuracy Level", span(class = "required", "*"))),
+                                  selectInput("topo_required_accuracy", label = NULL,
+                                              choices = c("Select accuracy level..." = "",
+                                                          "Standard (±5 cm)" = "standard",
+                                                          "High Precision (±2 cm)" = "high",
+                                                          "Engineering Grade (±1 cm)" = "engineering",
+                                                          "Survey Grade (±0.5 cm)" = "survey"),
+                                              selected = "")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "topo_project_description", 
+                                             span("Project Description", span(class = "required", "*"))),
+                                  textAreaInput("topo_project_description", label = NULL, 
+                                                placeholder = "Describe the project and specific requirements for the topography survey...", 
+                                                rows = 4)
                               )
                           ),
                           
-                          div(class = "form-group",
-                              tags$label(class = "form-label", `for` = "survey-urgency", "Urgency Level"),
-                              selectInput("survey_urgency", label = NULL,
-                                          choices = c("Normal (2-4 weeks)" = "normal",
-                                                      "High Priority (1-2 weeks)" = "high",
-                                                      "Urgent (3-7 days)" = "urgent",
-                                                      "Emergency (1-3 days)" = "emergency"),
-                                          selected = "normal")
+                          # B. Ownership Documents Section
+                          div(class = "survey-section",
+                              h3("B. Ownership Documents", 
+                                 style = "color: #2E7D32; border-bottom: 2px solid #C8E6C9; padding-bottom: 10px; margin-bottom: 20px;"),
+                              
+                              p("Note: Topo surveys can be done even if the applicant is not the owner, but owner consent is recommended.", 
+                                style = "color: #666; font-style: italic; margin-bottom: 20px;"),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "topo_ownership_docs", 
+                                             span("Land Title OR Tax Declaration", span(class = "required", "*"))),
+                                  fileInput("topo_ownership_docs", label = NULL,
+                                            accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                            buttonLabel = "Browse...",
+                                            placeholder = "Upload Land Title OR Tax Declaration document")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "topo_location_map", 
+                                             span("Location Map", span(class = "required", "*"))),
+                                  fileInput("topo_location_map", label = NULL,
+                                            accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                            buttonLabel = "Browse...",
+                                            placeholder = "Upload location map showing property boundaries")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "topo_existing_plans", 
+                                             span("Lot Plan or Previous Topographic Map (if available)")),
+                                  fileInput("topo_existing_plans", label = NULL,
+                                            accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                            buttonLabel = "Browse...",
+                                            placeholder = "Upload existing plans or previous topographic maps")
+                              )
                           ),
                           
-                          div(class = "form-group",
-                              tags$label(class = "form-label", `for` = "additional-notes", "Additional Notes (Optional)"),
-                              textAreaInput("additional_notes", label = NULL, 
-                                            placeholder = "Any additional information or special requirements...", 
-                                            rows = 3)
+                          # C. Authorization Documents Section
+                          div(class = "survey-section",
+                              h3("C. Authorization Documents", 
+                                 style = "color: #2E7D32; border-bottom: 2px solid #C8E6C9; padding-bottom: 10px; margin-bottom: 20px;"),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "topo_applicant_is_owner", 
+                                             span("Is the applicant the owner of the property?", span(class = "required", "*"))),
+                                  selectInput("topo_applicant_is_owner", label = NULL,
+                                              choices = c("Select..." = "",
+                                                          "Yes, I am the owner" = "yes",
+                                                          "No, I am not the owner" = "no"),
+                                              selected = "")
+                              ),
+                              
+                              # Conditional panel for non-owners
+                              conditionalPanel(
+                                condition = "input.topo_applicant_is_owner == 'no'",
+                                div(class = "conditional-documents",
+                                    h4("Required Authorization Documents (for non-owners):"),
+                                    
+                                    div(class = "form-group",
+                                        tags$label(class = "form-label", `for` = "topo_authorization_letter", 
+                                                   span("Authorization Letter or Special Power of Attorney", span(class = "required", "*"))),
+                                        fileInput("topo_authorization_letter", label = NULL,
+                                                  accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                                  buttonLabel = "Browse...",
+                                                  placeholder = "Upload Authorization Letter or SPA")
+                                    ),
+                                    
+                                    div(class = "form-group",
+                                        tags$label(class = "form-label", `for` = "topo_owner_id_type", 
+                                                   span("Owner's Valid Government-Issued ID Type", span(class = "required", "*"))),
+                                        selectInput("topo_owner_id_type", label = NULL,
+                                                    choices = c("Select ID type..." = "",
+                                                                "Philippine Passport" = "passport",
+                                                                "Driver's License" = "driver_license",
+                                                                "UMID" = "umid",
+                                                                "PRC ID" = "prc_id",
+                                                                "Voter's ID" = "voter_id"),
+                                                    selected = "")
+                                    ),
+                                    
+                                    div(class = "form-group",
+                                        tags$label(class = "form-label", `for` = "topo_owner_id_image", 
+                                                   span("Owner's Government ID Image", span(class = "required", "*"))),
+                                        fileInput("topo_owner_id_image", label = NULL,
+                                                  accept = c("image/png", "image/jpeg", "image/jpg", "application/pdf"),
+                                                  buttonLabel = "Browse...",
+                                                  placeholder = "Upload image/scan of owner's government ID")
+                                    ),
+                                    
+                                    div(class = "document-note",
+                                        tags$b("Note:"), " If the applicant is not the owner, authorization from the property owner is required.")
+                                )
+                              ),
+                              
+                              # Always required: Applicant's ID
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "topo_applicant_id_type", 
+                                             span("Applicant's Valid Government-Issued ID Type", span(class = "required", "*"))),
+                                  selectInput("topo_applicant_id_type", label = NULL,
+                                              choices = c("Select ID type..." = "",
+                                                          "Philippine Passport" = "passport",
+                                                          "Driver's License" = "driver_license",
+                                                          "UMID" = "umid",
+                                                          "PRC ID" = "prc_id",
+                                                          "Voter's ID" = "voter_id"),
+                                              selected = "")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "topo_applicant_id_image", 
+                                             span("Applicant's Government ID Image", span(class = "required", "*"))),
+                                  fileInput("topo_applicant_id_image", label = NULL,
+                                            accept = c("image/png", "image/jpeg", "image/jpg", "application/pdf"),
+                                            buttonLabel = "Browse...",
+                                            placeholder = "Upload image/scan of applicant's government ID")
+                              )
                           ),
                           
-                          div(style = "display: flex; gap: 15px; margin-top: 30px;",
-                              actionButton("create_survey_btn", "Submit Survey Request", class = "btn-primary",
-                                           style = "width: auto; min-width: 200px;"),
-                              actionButton("clear_survey_form", "Clear Form", class = "btn-secondary",
+                          # D. Additional Engineering/Architectural Requirements Section
+                          div(class = "survey-section",
+                              h3("D. Additional Engineering or Architectural Requirements", 
+                                 style = "color: #2E7D32; border-bottom: 2px solid #C8E6C9; padding-bottom: 10px; margin-bottom: 20px;"),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "topo_site_development_plan", 
+                                             span("Site Development Plan")),
+                                  fileInput("topo_site_development_plan", label = NULL,
+                                            accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                            buttonLabel = "Browse...",
+                                            placeholder = "Upload Site Development Plan (if available)")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "topo_design_guidelines", 
+                                             span("Architect's / Engineer's Design Guidelines")),
+                                  fileInput("topo_design_guidelines", label = NULL,
+                                            accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                            buttonLabel = "Browse...",
+                                            placeholder = "Upload design guidelines or specifications")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "topo_dem_specs", 
+                                             span("DEM / Project Specifications")),
+                                  fileInput("topo_dem_specs", label = NULL,
+                                            accept = c("application/pdf", "application/vnd.ms-excel", 
+                                                       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                                       "image/png", "image/jpeg", "image/jpg"),
+                                            buttonLabel = "Browse...",
+                                            placeholder = "Upload DEM files or project specifications from contractor")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "topo_grid_spacing", 
+                                             span("Required Grid Spacing / Point Density")),
+                                  div(style = "display: flex; gap: 10px;",
+                                      numericInput("topo_grid_spacing", label = NULL, value = NULL, min = 0.1, step = 0.1, width = "70%"),
+                                      selectInput("topo_grid_unit", label = NULL, 
+                                                  choices = c("Meters" = "m",
+                                                              "Centimeters" = "cm",
+                                                              "Feet" = "ft"),
+                                                  selected = "m", width = "30%")
+                                  )
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "topo_deliverables", 
+                                             span("Required Deliverables")),
+                                  checkboxGroupInput("topo_deliverables", label = NULL,
+                                                     choices = c("2D Contour Map" = "2d_contour",
+                                                                 "3D Digital Terrain Model (DTM)" = "3d_dtm",
+                                                                 "Cross Sections" = "cross_sections",
+                                                                 "Volume Calculations" = "volume_calc",
+                                                                 "CAD Files (DWG/DXF)" = "cad_files",
+                                                                 "GIS-Compatible Files" = "gis_files",
+                                                                 "PDF Report with Analysis" = "pdf_report"),
+                                                     selected = c("2d_contour", "pdf_report"))
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "topo_special_requirements", 
+                                             span("Special Requirements")),
+                                  textAreaInput("topo_special_requirements", label = NULL, 
+                                                placeholder = "Any special survey requirements, equipment needs, or specific features to be captured...", 
+                                                rows = 3)
+                              )
+                          ),
+                          
+                          # Additional Information Section
+                          div(class = "survey-section",
+                              h3("Additional Information", 
+                                 style = "color: #2E7D32; border-bottom: 2px solid #C8E6C9; padding-bottom: 10px; margin-bottom: 20px;"),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "topo_contact_phone", 
+                                             span("Contact Phone Number", span(class = "required", "*"))),
+                                  textInput("topo_contact_phone", label = NULL, placeholder = "Enter your contact phone number")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "topo_contact_email", 
+                                             span("Contact Email Address", span(class = "required", "*"))),
+                                  textInput("topo_contact_email", label = NULL, placeholder = "Enter your email address")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "topo_preferred_date", 
+                                             span("Preferred Survey Date")),
+                                  dateInput("topo_preferred_date", label = NULL, value = Sys.Date() + 7)
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "topo_survey_urgency", 
+                                             span("Urgency Level")),
+                                  selectInput("topo_survey_urgency", label = NULL,
+                                              choices = c("Normal (2-4 weeks)" = "normal",
+                                                          "High Priority (1-2 weeks)" = "high",
+                                                          "Urgent (3-7 days)" = "urgent",
+                                                          "Emergency (1-3 days)" = "emergency"),
+                                              selected = "normal")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "topo_additional_notes", 
+                                             span("Additional Notes (Optional)")),
+                                  textAreaInput("topo_additional_notes", label = NULL, 
+                                                placeholder = "Any additional information or special requirements...", 
+                                                rows = 3)
+                              )
+                          ),
+                          
+                          # Form submission buttons
+                          div(style = "display: flex; gap: 15px; margin-top: 40px; padding-top: 20px; border-top: 2px solid #E8F5E9;",
+                              actionButton("submit_topo_survey", "Submit Topography Survey Request", 
+                                           class = "btn-primary",
+                                           style = "width: auto; min-width: 250px; flex: 1;"),
+                              actionButton("clear_topo_form", "Clear Form", 
+                                           class = "btn-secondary",
                                            style = "width: auto; min-width: 150px;")
                           )
                       )
@@ -3188,68 +3423,119 @@ server <- function(input, output, session) {
     showNotification("Subdivision form cleared successfully.", type = "default", duration = 3)
   })
   
-  # Create survey handler for other survey types
-  observeEvent(input$create_survey_btn, {
-    # Get form values
-    surveyor_name <- input$surveyor_name
-    start_date <- input$survey_start_date
-    survey_reason <- input$survey_reason
-    survey_type <- selected_survey_type()
-    
-    # Basic validation
-    if (is.null(surveyor_name) || surveyor_name == "") {
-      showNotification("Surveyor Name is required.", type = "warning")
-      return()
-    }
-    
-    if (is.null(start_date)) {
-      showNotification("Start Date is required.", type = "warning")
-      return()
-    }
-    
-    if (is.null(survey_reason) || survey_reason == "") {
-      showNotification("Reason for getting Survey is required.", type = "warning")
-      return()
-    }
-    
-    # Get optional fields
-    client_name <- input$client_name
-    property_address <- input$property_address
-    property_size <- input$property_size
-    size_unit <- input$size_unit
-    survey_urgency <- input$survey_urgency
-    additional_notes <- input$additional_notes
-    
-    # Format urgency for display
-    urgency_display <- switch(survey_urgency,
-                              "normal" = "Normal (2-4 weeks)",
-                              "high" = "High Priority (1-2 weeks)",
-                              "urgent" = "Urgent (3-7 days)",
-                              "emergency" = "Emergency (1-3 days)",
-                              survey_urgency)
-    
-    # Create success message
-    success_msg <- paste(
-      "Survey request submitted successfully!\n\n",
-      "Survey Type:", survey_type, "\n",
-      "Surveyor:", surveyor_name, "\n",
-      "Start Date:", format(start_date, "%B %d, %Y"), "\n",
-      "Urgency:", urgency_display
+  # Handle Topography Survey submission
+  observeEvent(input$submit_topo_survey, {
+    # Validate required fields
+    required_fields <- list(
+      "Project Title" = input$topo_project_title,
+      "Client Name" = input$topo_client_name,
+      "Project Location" = input$topo_project_location,
+      "Estimated Survey Area" = input$topo_survey_area,
+      "Required Accuracy Level" = input$topo_required_accuracy,
+      "Project Description" = input$topo_project_description,
+      "Land Title OR Tax Declaration" = input$topo_ownership_docs,
+      "Location Map" = input$topo_location_map,
+      "Is applicant the owner?" = input$topo_applicant_is_owner,
+      "Applicant's ID Type" = input$topo_applicant_id_type,
+      "Applicant's ID Image" = input$topo_applicant_id_image,
+      "Contact Phone" = input$topo_contact_phone,
+      "Contact Email" = input$topo_contact_email
     )
     
-    if (client_name != "") {
-      success_msg <- paste(success_msg, "\nClient:", client_name)
+    # Add conditional requirements for non-owners
+    if (!is.null(input$topo_applicant_is_owner) && input$topo_applicant_is_owner == "no") {
+      required_fields <- c(required_fields, list(
+        "Authorization Letter/SPA" = input$topo_authorization_letter,
+        "Owner's ID Type" = input$topo_owner_id_type,
+        "Owner's ID Image" = input$topo_owner_id_image
+      ))
     }
+    
+    missing_fields <- c()
+    for (field_name in names(required_fields)) {
+      value <- required_fields[[field_name]]
+      if (is.null(value) || (is.character(value) && value == "") || 
+          (is.numeric(value) && is.na(value))) {
+        missing_fields <- c(missing_fields, field_name)
+      }
+    }
+    
+    if (length(missing_fields) > 0) {
+      showNotification(
+        paste("Please fill in all required fields:", 
+              paste(missing_fields, collapse = ", ")),
+        type = "warning",
+        duration = 10
+      )
+      return()
+    }
+    
+    # Validate email format
+    if (!grepl("^[^@]+@[^@]+\\.[^@]+$", input$topo_contact_email)) {
+      showNotification("Please enter a valid email address.", type = "warning")
+      return()
+    }
+    
+    # Validate survey area
+    if (is.na(input$topo_survey_area) || input$topo_survey_area <= 0) {
+      showNotification("Survey area must be greater than 0.", type = "warning")
+      return()
+    }
+    
+    # All validation passed - show success message
+    deliverables_text <- ""
+    if (!is.null(input$topo_deliverables)) {
+      deliverables_text <- paste("Deliverables:", paste(input$topo_deliverables, collapse = ", "))
+    }
+    
+    owner_status <- ifelse(input$topo_applicant_is_owner == "yes", "Applicant is the owner", "Applicant is NOT the owner")
     
     showNotification(
-      success_msg,
-      type = "default",
-      duration = 10
+      HTML(paste(
+        "<h4>Topography Survey Request Submitted Successfully!</h4>",
+        "<p><strong>Reference Number:</strong> TOPO-", 
+        format(Sys.time(), "%Y%m%d%H%M%S"), "</p>",
+        "<p><strong>Project:</strong> ", input$topo_project_title, "</p>",
+        "<p><strong>Location:</strong> ", input$topo_project_location, "</p>",
+        "<p><strong>Survey Area:</strong> ", input$topo_survey_area, " ", input$topo_area_unit, "</p>",
+        "<p><strong>Accuracy Level:</strong> ", tools::toTitleCase(input$topo_required_accuracy), "</p>",
+        "<p><strong>Owner Status:</strong> ", owner_status, "</p>",
+        ifelse(nchar(deliverables_text) > 0, paste("<p>", deliverables_text, "</p>"), ""),
+        "<p>Our survey team will contact you within 2 business days to schedule the survey.</p>"
+      )),
+      type = "success",
+      duration = 15
     )
     
-    # Reset form and go back to survey types
-    shinyjs::reset("survey-form")
+    # Reset form and return to survey types
+    shinyjs::reset("topo-survey-form")
     selected_survey_type(NULL)
+  })
+  
+  # Handle clearing the Topography Survey form
+  observeEvent(input$clear_topo_form, {
+    # Reset all inputs in the topography form
+    updateTextInput(session, "topo_project_title", value = "")
+    updateTextInput(session, "topo_client_name", value = "")
+    updateTextInput(session, "topo_project_location", value = "")
+    updateNumericInput(session, "topo_survey_area", value = NULL)
+    updateSelectInput(session, "topo_area_unit", selected = "sqm")
+    updateSelectInput(session, "topo_required_accuracy", selected = "")
+    updateTextAreaInput(session, "topo_project_description", value = "")
+    updateSelectInput(session, "topo_applicant_is_owner", selected = "")
+    updateSelectInput(session, "topo_applicant_id_type", selected = "")
+    updateSelectInput(session, "topo_owner_id_type", selected = "")
+    updateTextInput(session, "topo_contact_phone", value = "")
+    updateTextInput(session, "topo_contact_email", value = "")
+    updateDateInput(session, "topo_preferred_date", value = Sys.Date() + 7)
+    updateSelectInput(session, "topo_survey_urgency", selected = "normal")
+    updateNumericInput(session, "topo_grid_spacing", value = NULL)
+    updateSelectInput(session, "topo_grid_unit", selected = "m")
+    updateCheckboxGroupInput(session, "topo_deliverables", selected = c("2d_contour", "pdf_report"))
+    updateTextAreaInput(session, "topo_special_requirements", value = "")
+    updateTextAreaInput(session, "topo_additional_notes", value = "")
+    
+    showNotification("Topography form cleared successfully.", type = "default", duration = 3)
   })
   
   # Handle Relocation Survey submission
@@ -3361,21 +3647,6 @@ server <- function(input, output, session) {
     updateTextAreaInput(session, "survey_reason", value = "")
     updateTextAreaInput(session, "additional_notes", value = "")
     updateSelectInput(session, "survey_urgency", selected = "normal")
-    
-    showNotification("Form cleared successfully.", type = "default", duration = 3)
-  })
-  
-  # Clear form handler for other survey types
-  observeEvent(input$clear_survey_form, {
-    updateTextInput(session, "surveyor_name", value = "")
-    updateDateInput(session, "survey_start_date", value = Sys.Date())
-    updateTextAreaInput(session, "survey_reason", value = "")
-    updateTextInput(session, "client_name", value = "")
-    updateTextInput(session, "property_address", value = "")
-    updateTextInput(session, "property_size", value = "")
-    updateSelectInput(session, "size_unit", selected = "sqm")
-    updateSelectInput(session, "survey_urgency", selected = "normal")
-    updateTextAreaInput(session, "additional_notes", value = "")
     
     showNotification("Form cleared successfully.", type = "default", duration = 3)
   })
