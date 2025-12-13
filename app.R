@@ -2294,81 +2294,241 @@ server <- function(input, output, session) {
                           )
                       )
                     } else if (selected_survey_type() == "Verification") {
-                      # Original survey form for other survey types
+                      # Verification Survey Form
                       div(class = "survey-form-container",
                           actionButton("back_to_survey_types", "← Back to Survey Types", 
                                        class = "survey-back-btn"),
                           
-                          h2(paste(selected_survey_type(), "Survey Request"), 
-                             style = "color: #1B5E20; margin-bottom: 25px;"),
-                          p("Fill out the form below to submit your survey request.", 
-                            style = "color: #666; margin-bottom: 30px;"),
+                          h2("Verification Survey Request Form", 
+                             style = "color: #1B5E20; margin-bottom: 25px; text-align: center;"),
+                          p("Please fill out all required fields for your verification survey request.", 
+                            style = "color: #666; margin-bottom: 30px; text-align: center;"),
                           
-                          # Survey Form
-                          div(class = "form-group",
-                              tags$label(class = "form-label", `for` = "surveyor-name", 
-                                         span("Surveyor Name", span(class = "required", "*"))),
-                              textInput("surveyor_name", label = NULL, placeholder = "Enter surveyor's full name")
+                          # Part I. Applicant Information Section
+                          div(class = "survey-section",
+                              h3("Part I. Applicant Information", 
+                                 style = "color: #2E7D32; border-bottom: 2px solid #C8E6C9; padding-bottom: 10px; margin-bottom: 20px;"),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "verification_full_name", 
+                                             span("Full Name", span(class = "required", "*"))),
+                                  textInput("verification_full_name", label = NULL, placeholder = "Enter your full name")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "verification_government_id_type", 
+                                             span("Valid Government-Issued ID Type", span(class = "required", "*"))),
+                                  selectInput("verification_government_id_type", label = NULL,
+                                              choices = c("Select ID type..." = "",
+                                                          "Philippine Passport" = "passport",
+                                                          "Driver's License" = "driver_license",
+                                                          "UMID" = "umid",
+                                                          "PRC ID" = "prc_id",
+                                                          "Voter's ID" = "voter_id"),
+                                              selected = "")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "verification_government_id_image", 
+                                             span("Government ID Image", span(class = "required", "*"))),
+                                  fileInput("verification_government_id_image", label = NULL, 
+                                            accept = c("image/png", "image/jpeg", "image/jpg", "application/pdf"),
+                                            buttonLabel = "Browse...",
+                                            placeholder = "Upload image/scan of your government ID")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "verification_applicant_full_name", 
+                                             span("Applicant Full Name", span(class = "required", "*"))),
+                                  textInput("verification_applicant_full_name", label = NULL, placeholder = "Enter applicant's full name")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "verification_special_power_attorney", 
+                                             span("Special Power of Attorney (Optional - if different from above)")),
+                                  fileInput("verification_special_power_attorney", label = NULL,
+                                            accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                            buttonLabel = "Browse...",
+                                            placeholder = "Upload Special Power of Attorney document")
+                              ),
+                              
+                              div(class = "document-note",
+                                  tags$b("Note:"), " Special Power of Attorney is only required if the Applicant Full Name is different from the Full Name above.")
                           ),
                           
-                          div(class = "form-group",
-                              tags$label(class = "form-label", `for` = "survey-start-date", 
-                                         span("Start Date", span(class = "required", "*"))),
-                              dateInput("survey_start_date", label = NULL, value = Sys.Date())
+                          # Part II. Core Application Documents Section
+                          div(class = "survey-section",
+                              h3("Part II. Core Application Documents", 
+                                 style = "color: #2E7D32; border-bottom: 2px solid #C8E6C9; padding-bottom: 10px; margin-bottom: 20px;"),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "verification_application_form", 
+                                             span("Duly Accomplished Application Form (LMB or DENR prescribed Form)", span(class = "required", "*"))),
+                                  fileInput("verification_application_form", label = NULL,
+                                            accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                            buttonLabel = "Browse...",
+                                            placeholder = "Upload LMB/DENR Application Form")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "verification_notarized_application", 
+                                             span("Notarized Verification Survey Application", span(class = "required", "*"))),
+                                  fileInput("verification_notarized_application", label = NULL,
+                                            accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                            buttonLabel = "Browse...",
+                                            placeholder = "Upload Notarized Verification Survey Application")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "verification_blueprint_copies", 
+                                             span("Three Blueprint Copies of Survey Plan", span(class = "required", "*"))),
+                                  fileInput("verification_blueprint_copies", label = NULL,
+                                            accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                            buttonLabel = "Browse...",
+                                            multiple = TRUE,
+                                            placeholder = "Upload three blueprint copies (you can select multiple files)")
+                              ),
+                              
+                              div(class = "document-note",
+                                  tags$b("Note:"), " Please upload all three blueprint copies. You can select multiple files by holding Ctrl/Cmd while selecting.")
                           ),
                           
-                          div(class = "form-group",
-                              tags$label(class = "form-label", `for` = "survey-reason", 
-                                         span("Reason for getting Survey", span(class = "required", "*"))),
-                              textAreaInput("survey_reason", label = NULL, 
-                                            placeholder = "Describe the purpose and reason for this survey...", 
-                                            rows = 4)
-                          ),
-                          
-                          div(class = "form-group",
-                              tags$label(class = "form-label", `for` = "client-name", "Client Name (Optional)"),
-                              textInput("client_name", label = NULL, placeholder = "Enter client's name")
-                          ),
-                          
-                          div(class = "form-group",
-                              tags$label(class = "form-label", `for` = "property-address", "Property Address (Optional)"),
-                              textInput("property_address", label = NULL, placeholder = "Enter property address")
-                          ),
-                          
-                          div(class = "form-group",
-                              tags$label(class = "form-label", `for` = "property-size", "Property Size (Optional)"),
-                              div(style = "display: flex; gap: 10px;",
-                                  textInput("property_size", label = NULL, placeholder = "Enter size", width = "70%"),
-                                  selectInput("size_unit", label = NULL, 
-                                              choices = c("Square Meters" = "sqm",
-                                                          "Hectares" = "hectares",
-                                                          "Acres" = "acres",
-                                                          "Square Feet" = "sqft"),
-                                              width = "30%")
+                          # Part III. Survey Return / Computation Section
+                          div(class = "survey-section",
+                              h3("Part III. Survey Return / Computation", 
+                                 style = "color: #2E7D32; border-bottom: 2px solid #C8E6C9; padding-bottom: 10px; margin-bottom: 20px;"),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "verification_lot_data_computation", 
+                                             span("Lot Data Computation", span(class = "required", "*"))),
+                                  fileInput("verification_lot_data_computation", label = NULL,
+                                            accept = c("application/pdf", "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+                                            buttonLabel = "Browse...",
+                                            placeholder = "Upload Lot Data Computation document or spreadsheet")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "verification_location_coordinates", 
+                                             span("Location Coordinates", span(class = "required", "*"))),
+                                  fileInput("verification_location_coordinates", label = NULL,
+                                            accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                            buttonLabel = "Browse...",
+                                            placeholder = "Upload document showing location coordinates")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "verification_bearings_distances", 
+                                             span("Observation and Computation of Bearings and Distances", span(class = "required", "*"))),
+                                  fileInput("verification_bearings_distances", label = NULL,
+                                            accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                            buttonLabel = "Browse...",
+                                            placeholder = "Upload bearings and distances computation")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "verification_monuments_description", 
+                                             span("Description of Monuments Established", span(class = "required", "*"))),
+                                  fileInput("verification_monuments_description", label = NULL,
+                                            accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                            buttonLabel = "Browse...",
+                                            placeholder = "Upload description of monuments established")
                               )
                           ),
                           
-                          div(class = "form-group",
-                              tags$label(class = "form-label", `for` = "survey-urgency", "Urgency Level"),
-                              selectInput("survey_urgency", label = NULL,
-                                          choices = c("Normal (2-4 weeks)" = "normal",
-                                                      "High Priority (1-2 weeks)" = "high",
-                                                      "Urgent (3-7 days)" = "urgent",
-                                                      "Emergency (1-3 days)" = "emergency"),
-                                          selected = "normal")
+                          # Part IV. Supporting Documents Section
+                          div(class = "survey-section",
+                              h3("Part IV. Supporting Documents", 
+                                 style = "color: #2E7D32; border-bottom: 2px solid #C8E6C9; padding-bottom: 10px; margin-bottom: 20px;"),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "verification_ctc_title", 
+                                             span("CTC of Title", span(class = "required", "*"))),
+                                  fileInput("verification_ctc_title", label = NULL,
+                                            accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                            buttonLabel = "Browse...",
+                                            placeholder = "Upload Certified True Copy of Title")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "verification_vicinity_map", 
+                                             span("Vicinity Map", span(class = "required", "*"))),
+                                  fileInput("verification_vicinity_map", label = NULL,
+                                            accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                            buttonLabel = "Browse...",
+                                            placeholder = "Upload Vicinity Map")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "verification_geodetic_engineer_cert", 
+                                             span("Geodetic Engineer's Certificate", span(class = "required", "*"))),
+                                  fileInput("verification_geodetic_engineer_cert", label = NULL,
+                                            accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                            buttonLabel = "Browse...",
+                                            placeholder = "Upload Geodetic Engineer's Certificate")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "verification_regional_survey_clearance", 
+                                             span("Regional Survey Division Clearance", span(class = "required", "*"))),
+                                  fileInput("verification_regional_survey_clearance", label = NULL,
+                                            accept = c("application/pdf", "image/png", "image/jpeg", "image/jpg"),
+                                            buttonLabel = "Browse...",
+                                            placeholder = "Upload Regional Survey Division Clearance")
+                              )
                           ),
                           
-                          div(class = "form-group",
-                              tags$label(class = "form-label", `for` = "additional-notes", "Additional Notes (Optional)"),
-                              textAreaInput("additional_notes", label = NULL, 
-                                            placeholder = "Any additional information or special requirements...", 
-                                            rows = 3)
+                          # Additional Information Section
+                          div(class = "survey-section",
+                              h3("Additional Information", 
+                                 style = "color: #2E7D32; border-bottom: 2px solid #C8E6C9; padding-bottom: 10px; margin-bottom: 20px;"),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "verification_contact_phone", 
+                                             span("Contact Phone Number", span(class = "required", "*"))),
+                                  textInput("verification_contact_phone", label = NULL, placeholder = "Enter your contact phone number")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "verification_contact_email", 
+                                             span("Contact Email Address", span(class = "required", "*"))),
+                                  textInput("verification_contact_email", label = NULL, placeholder = "Enter your email address")
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "verification_survey_reason", 
+                                             span("Reason for Verification Survey", span(class = "required", "*"))),
+                                  textAreaInput("verification_survey_reason", label = NULL, 
+                                                placeholder = "Please describe the reason for requesting this verification survey...", 
+                                                rows = 4)
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "verification_additional_notes", 
+                                             span("Additional Notes (Optional)")),
+                                  textAreaInput("verification_additional_notes", label = NULL, 
+                                                placeholder = "Any additional information or special requirements...", 
+                                                rows = 3)
+                              ),
+                              
+                              div(class = "form-group",
+                                  tags$label(class = "form-label", `for` = "verification_survey_urgency", 
+                                             span("Urgency Level")),
+                                  selectInput("verification_survey_urgency", label = NULL,
+                                              choices = c("Normal (2-4 weeks)" = "normal",
+                                                          "High Priority (1-2 weeks)" = "high",
+                                                          "Urgent (3-7 days)" = "urgent",
+                                                          "Emergency (1-3 days)" = "emergency"),
+                                              selected = "normal")
+                              )
                           ),
                           
-                          div(style = "display: flex; gap: 15px; margin-top: 30px;",
-                              actionButton("create_survey_btn", "Submit Survey Request", class = "btn-primary",
-                                           style = "width: auto; min-width: 200px;"),
-                              actionButton("clear_survey_form", "Clear Form", class = "btn-secondary",
+                          # Form submission buttons
+                          div(style = "display: flex; gap: 15px; margin-top: 40px; padding-top: 20px; border-top: 2px solid #E8F5E9;",
+                              actionButton("submit_verification_survey", "Submit Verification Survey Request", 
+                                           class = "btn-primary",
+                                           style = "width: auto; min-width: 250px; flex: 1;"),
+                              actionButton("clear_verification_form", "Clear Form", 
+                                           class = "btn-secondary",
                                            style = "width: auto; min-width: 150px;")
                           )
                       )
@@ -3218,6 +3378,100 @@ server <- function(input, output, session) {
     updateTextAreaInput(session, "additional_notes", value = "")
     
     showNotification("Form cleared successfully.", type = "default", duration = 3)
+  })
+  
+  observeEvent(input$submit_verification_survey, {
+    # Validate required fields
+    required_fields <- list(
+      "Full Name" = input$verification_full_name,
+      "Government ID Type" = input$verification_government_id_type,
+      "Government ID Image" = input$verification_government_id_image,
+      "Applicant Full Name" = input$verification_applicant_full_name,
+      "Application Form" = input$verification_application_form,
+      "Notarized Application" = input$verification_notarized_application,
+      "Blueprint Copies" = input$verification_blueprint_copies,
+      "Lot Data Computation" = input$verification_lot_data_computation,
+      "Location Coordinates" = input$verification_location_coordinates,
+      "Bearings and Distances" = input$verification_bearings_distances,
+      "Monuments Description" = input$verification_monuments_description,
+      "CTC of Title" = input$verification_ctc_title,
+      "Vicinity Map" = input$verification_vicinity_map,
+      "Geodetic Engineer's Certificate" = input$verification_geodetic_engineer_cert,
+      "Regional Survey Clearance" = input$verification_regional_survey_clearance,
+      "Contact Phone" = input$verification_contact_phone,
+      "Contact Email" = input$verification_contact_email,
+      "Survey Reason" = input$verification_survey_reason
+    )
+    
+    missing_fields <- c()
+    for (field_name in names(required_fields)) {
+      value <- required_fields[[field_name]]
+      if (is.null(value) || (is.character(value) && value == "") || 
+          (is.numeric(value) && is.na(value))) {
+        missing_fields <- c(missing_fields, field_name)
+      }
+    }
+    
+    # Special check for blueprint copies (needs exactly 3 files)
+    if (!is.null(input$verification_blueprint_copies) && 
+        length(input$verification_blueprint_copies$name) < 3) {
+      missing_fields <- c(missing_fields, "Blueprint Copies (need 3 copies)")
+    }
+    
+    if (length(missing_fields) > 0) {
+      showNotification(
+        paste("Please fill in all required fields:", 
+              paste(missing_fields, collapse = ", ")),
+        type = "warning",
+        duration = 10
+      )
+      return()
+    }
+    
+    # Validate email format
+    if (!grepl("^[^@]+@[^@]+\\.[^@]+$", input$verification_contact_email)) {
+      showNotification("Please enter a valid email address.", type = "warning")
+      return()
+    }
+    
+    # Validate blueprint copies count
+    if (length(input$verification_blueprint_copies$name) != 3) {
+      showNotification("Please upload exactly three blueprint copies.", type = "warning")
+      return()
+    }
+    
+    # All validation passed - show success message
+    showNotification(
+      HTML(paste(
+        "<h4>Verification Survey Request Submitted Successfully!</h4>",
+        "<p><strong>Reference Number:</strong> VERIFY-", 
+        format(Sys.time(), "%Y%m%d%H%M%S"), "</p>",
+        "<p><strong>Applicant:</strong> ", input$verification_applicant_full_name, "</p>",
+        "<p><strong>Blueprint Copies Uploaded:</strong> ", length(input$verification_blueprint_copies$name), "</p>",
+        "<p>We will process your verification survey request and contact you within 5 business days.</p>"
+      )),
+      type = "success",
+      duration = 15
+    )
+    
+    # Reset form and return to survey types
+    shinyjs::reset("verification-survey-form")
+    selected_survey_type(NULL)
+  })
+  
+  # Handle clearing the Verification Survey form
+  observeEvent(input$clear_verification_form, {
+    # Reset all inputs in the verification form
+    updateTextInput(session, "verification_full_name", value = "")
+    updateSelectInput(session, "verification_government_id_type", selected = "")
+    updateTextInput(session, "verification_applicant_full_name", value = "")
+    updateTextInput(session, "verification_contact_phone", value = "")
+    updateTextInput(session, "verification_contact_email", value = "")
+    updateTextAreaInput(session, "verification_survey_reason", value = "")
+    updateTextAreaInput(session, "verification_additional_notes", value = "")
+    updateSelectInput(session, "verification_survey_urgency", selected = "normal")
+    
+    showNotification("Verification form cleared successfully.", type = "default", duration = 3)
   })
   
   # Update profile handler
