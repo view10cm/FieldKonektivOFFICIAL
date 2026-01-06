@@ -5,6 +5,15 @@ library(shinyWidgets)
 library(DBI)
 library(RMySQL)
 library(bcrypt)
+library(dplyr)
+library(leaflet)        # For interactive maps
+library(mapview)        # For static map exports
+library(webshot2)       # For saving leaflet maps as images
+library(ggplot2)        # For creating 2D maps
+library(sf)             # For spatial data handling
+library(gridExtra)      # For PDF layout
+library(knitr)          # For report generation
+library(rmarkdown)      # For PDF generation
 
 # MySQL Database Configuration
 db_config <- list(
@@ -149,6 +158,163 @@ authenticate_user <- function(email, password) {
   })
 }
 
+# Function to save relocation survey to database - UPDATED VERSION
+save_relocation_survey <- function(user_id, form_data) {
+  con <- connect_to_db()
+  if (is.null(con)) return(list(success = FALSE, message = "Database connection failed"))
+  
+  tryCatch({
+    # Prepare the SQL query
+    query <- sprintf(
+      "INSERT INTO relocation_survey_forms (
+        user_id,
+        full_name,
+        government_id_type,
+        government_id_image,
+        applicant_full_name,
+        special_power_attorney,
+        land_title_status,
+        barangay_clearance,
+        tax_delinquency_certificate,
+        block_number,
+        lot_number,
+        subdivision_name,
+        area,
+        area_unit,
+        contact_phone,
+        contact_email,
+        survey_reason,
+        additional_notes,
+        urgency_level,
+        relocation_status
+      ) VALUES (
+        %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, %d, '%s', %f, '%s', '%s', '%s', '%s', '%s', '%s', 'Submitted'
+      )",
+      user_id,
+      dbEscapeStrings(con, form_data$full_name),
+      dbEscapeStrings(con, form_data$government_id_type),
+      dbEscapeStrings(con, form_data$government_id_image),
+      dbEscapeStrings(con, form_data$applicant_full_name),
+      dbEscapeStrings(con, form_data$special_power_attorney),
+      dbEscapeStrings(con, form_data$land_title_status),
+      dbEscapeStrings(con, form_data$barangay_clearance),
+      dbEscapeStrings(con, form_data$tax_delinquency_certificate),
+      form_data$block_number,
+      form_data$lot_number,
+      dbEscapeStrings(con, form_data$subdivision_name),
+      form_data$area,
+      dbEscapeStrings(con, form_data$area_unit),
+      dbEscapeStrings(con, form_data$contact_phone),
+      dbEscapeStrings(con, form_data$contact_email),
+      dbEscapeStrings(con, form_data$survey_reason),
+      dbEscapeStrings(con, form_data$additional_notes),
+      dbEscapeStrings(con, form_data$urgency_level)
+    )
+    
+    # Execute the query
+    dbExecute(con, query)
+    
+    # Get the last inserted ID
+    last_id_query <- "SELECT LAST_INSERT_ID() as id"
+    last_id_result <- dbGetQuery(con, last_id_query)
+    relocation_id <- last_id_result$id[1]
+    
+    dbDisconnect(con)
+    
+    return(list(success = TRUE, message = "Relocation survey saved successfully", id = relocation_id))
+  }, error = function(e) {
+    try(dbDisconnect(con), silent = TRUE)
+    error_msg <- gsub("['\"]", "", e$message)
+    error_msg <- gsub("[\r\n]", " ", error_msg)
+    return(list(success = FALSE, message = paste("Database error:", error_msg)))
+  })
+}
+
+# Function to save uploaded files and return their paths - UPDATED VERSION
+save_uploaded_file <- function(file_input, upload_dir = "uploads") {
+  if (is.null(file_input)) {
+    return(NULL)
+  }
+  
+  # Check if file_input has the expected structure
+  if (!is.data.frame(file_input) || nrow(file_input) == 0) {
+    return(NULL)
+  }
+  
+  # Create upload directory if it doesn't exist
+  if (!dir.exists(upload_dir)) {
+    dir.create(upload_dir, recursive = TRUE)
+  }
+  
+  # Generate unique filename
+  file_ext <- tools::file_ext(file_input$name)
+  if (nchar(file_ext) == 0) {
+    file_ext <- "dat"
+  }
+  
+  unique_name <- paste0(
+    gsub("[^[:alnum:]]", "_", file_input$name),
+    "_",
+    format(Sys.time(), "%Y%m%d_%H%M%S"),
+    ".",
+    file_ext
+  )
+  
+  file_path <- file.path(upload_dir, unique_name)
+  
+  # Copy the file
+  tryCatch({
+    file.copy(file_input$datapath, file_path)
+    return(file_path)
+  }, error = function(e) {
+    return(NULL)
+  })
+}
+
+# Function to fetch user's relocation surveys - UPDATED VERSION
+fetch_user_surveys <- function(user_id) {
+  con <- connect_to_db()
+  if (is.null(con)) return(data.frame())
+  
+  tryCatch({
+    query <- sprintf(
+      "SELECT 
+        RelocationID,
+        full_name,
+        applicant_full_name,
+        land_title_status,
+        urgency_level,
+        relocation_status,
+        submitted_at,
+        updated_at,
+        block_number,
+        lot_number,
+        subdivision_name,
+        area,
+        area_unit
+      FROM relocation_survey_forms 
+      WHERE user_id = %d 
+      ORDER BY submitted_at DESC",
+      user_id
+    )
+    
+    surveys <- dbGetQuery(con, query)
+    dbDisconnect(con)
+    
+    # Ensure column names are correct
+    if (nrow(surveys) > 0) {
+      # Rename columns if needed
+      if ("RelocationID" %in% colnames(surveys)) {
+        surveys$RelocationID <- as.character(surveys$RelocationID)
+      }
+    }
+    return(surveys)
+  }, error = function(e) {
+    try(dbDisconnect(con), silent = TRUE)
+    return(data.frame())
+  })
+}
+
 # Function to validate phone number (11 digits, numbers only)
 validate_phone_number <- function(phone) {
   # Remove any whitespace
@@ -165,6 +331,249 @@ validate_phone_number <- function(phone) {
   }
   
   return(list(valid = TRUE, message = "Phone number is valid"))
+}
+
+# Function to generate a sample 2D subdivision map (Philippines example)
+generate_subdivision_map <- function(subdivision_id, lot_number, block_number, area_sqm) {
+  # Sample coordinates for a subdivision in the Philippines
+  # These would typically come from your database
+  set.seed(subdivision_id)  # For reproducibility
+  
+  # Create sample polygon data for a subdivision
+  # In a real app, this would come from your spatial database
+  if (subdivision_id %% 4 == 0) {
+    # Sample coordinates for Metro Manila area
+    base_lat <- 14.5995 + runif(1, -0.01, 0.01)
+    base_lng <- 120.9842 + runif(1, -0.01, 0.01)
+  } else if (subdivision_id %% 4 == 1) {
+    # Sample coordinates for Cebu area
+    base_lat <- 10.3157 + runif(1, -0.01, 0.01)
+    base_lng <- 123.8854 + runif(1, -0.01, 0.01)
+  } else if (subdivision_id %% 4 == 2) {
+    # Sample coordinates for Davao area
+    base_lat <- 7.1907 + runif(1, -0.01, 0.01)
+    base_lng <- 125.4553 + runif(1, -0.01, 0.01)
+  } else {
+    # Sample coordinates for Baguio area
+    base_lat <- 16.4023 + runif(1, -0.01, 0.01)
+    base_lng <- 120.5960 + runif(1, -0.01, 0.01)
+  }
+  
+  # Generate polygon vertices for the lot
+  num_sides <- 4  # Assuming rectangular lots
+  angle_step <- 2 * pi / num_sides
+  
+  # Calculate dimensions based on area (assuming rectangle)
+  width <- sqrt(area_sqm / 10000)  # Convert to degrees (approximate)
+  height <- (area_sqm / 10000) / width
+  
+  # Generate polygon coordinates
+  angles <- seq(0, 2 * pi - angle_step, by = angle_step)
+  polygon_coords <- data.frame(
+    lat = base_lat + width/111 * cos(angles + runif(1, 0, pi/4)),
+    lng = base_lng + height/(111 * cos(base_lat * pi/180)) * sin(angles + runif(1, 0, pi/4))
+  )
+  
+  return(polygon_coords)
+}
+
+# Function to create interactive leaflet map
+create_interactive_map <- function(polygon_coords, subdivision_name, lot_number, block_number) {
+  # Calculate center of polygon
+  center_lat <- mean(polygon_coords$lat)
+  center_lng <- mean(polygon_coords$lng)
+  
+  # Create leaflet map
+  map <- leaflet() %>%
+    addTiles(
+      urlTemplate = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      attribution = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    ) %>%
+    addProviderTiles(providers$OpenStreetMap, group = "OpenStreetMap") %>%
+    addProviderTiles(providers$Esri.WorldImagery, group = "Satellite") %>%
+    
+    # Add polygon
+    addPolygons(
+      lng = polygon_coords$lng,
+      lat = polygon_coords$lat,
+      fillColor = "#4CAF50",
+      fillOpacity = 0.5,
+      color = "#2E7D32",
+      weight = 3,
+      label = paste("Lot", lot_number, "- Block", block_number),
+      popup = paste(
+        "<b>Subdivision:</b>", subdivision_name, "<br>",
+        "<b>Block:</b>", block_number, "<br>",
+        "<b>Lot:</b>", lot_number, "<br>",
+        "<b>Location:</b>", round(center_lat, 6), ",", round(center_lng, 6)
+      )
+    ) %>%
+    
+    # Add markers
+    addMarkers(
+      lng = center_lng,
+      lat = center_lat,
+      popup = paste("Center of Lot", lot_number),
+      label = "Center Point"
+    ) %>%
+    
+    # Add layer control
+    addLayersControl(
+      baseGroups = c("OpenStreetMap", "Satellite"),
+      options = layersControlOptions(collapsed = FALSE)
+    ) %>%
+    
+    # Set view
+    setView(lng = center_lng, lat = center_lat, zoom = 17)
+  
+  return(map)
+}
+
+# Function to create static ggplot2 map (for PDF/PNG export)
+create_static_map <- function(polygon_coords, subdivision_name, lot_number, block_number, area_sqm) {
+  # Create a simple ggplot map
+  p <- ggplot() +
+    geom_polygon(
+      data = polygon_coords,
+      aes(x = lng, y = lat),
+      fill = "#4CAF50",
+      alpha = 0.5,
+      color = "#2E7D32",
+      size = 1
+    ) +
+    geom_point(
+      data = data.frame(
+        x = mean(polygon_coords$lng),
+        y = mean(polygon_coords$lat)
+      ),
+      aes(x = x, y = y),
+      color = "#D32F2F",
+      size = 3
+    ) +
+    annotate(
+      "text",
+      x = mean(polygon_coords$lng),
+      y = max(polygon_coords$lat) + 0.0001,
+      label = paste("Lot", lot_number, "- Block", block_number),
+      size = 5,
+      fontface = "bold"
+    ) +
+    labs(
+      title = paste("Subdivision Map:", subdivision_name),
+      subtitle = paste("Area:", area_sqm, "sqm"),
+      x = "Longitude",
+      y = "Latitude"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+      plot.subtitle = element_text(hjust = 0.5, size = 12),
+      axis.title = element_text(size = 10)
+    ) +
+    coord_equal()
+  
+  return(p)
+}
+
+# Function to generate PDF report
+generate_pdf_report <- function(survey_data, map_plot, output_file) {
+  # Create temporary Rmd file
+  rmd_content <- paste0(
+    '---
+title: "Subdivision Survey Report"
+author: "FieldConektiv"
+date: "', Sys.Date(), '"
+output: pdf_document
+geometry: "a4paper, margin=1in"
+---
+
+# Subdivision Survey Report
+
+## Survey Details
+
+**Reference ID:** ', survey_data$RelocationID, '  
+**Applicant:** ', survey_data$applicant_full_name, '  
+**Block Number:** ', survey_data$block_number, '  
+**Lot Number:** ', survey_data$lot_number, '  
+**Land Title Status:** ', tools::toTitleCase(gsub("_", " ", survey_data$land_title_status)), '  
+**Area:** ', survey_data$area, ' ', survey_data$area_unit, '  
+**Urgency Level:** ', tools::toTitleCase(gsub("_", " ", survey_data$urgency_level)), '  
+**Status:** ', survey_data$relocation_status, '  
+**Submitted:** ', survey_data$submitted_at, '  
+
+## Location Map
+
+```{r echo=FALSE, fig.width=8, fig.height=6, fig.cap="2D Subdivision Map"}',
+    '\n# Save the plot to a variable in this chunk\nprint(map_plot)\n',
+    '```
+
+## Technical Specifications
+
+1. **Coordinates:** WGS84 Datum
+2. **Map Scale:** 1:500
+3. **Projection:** UTM Zone 51N
+4. **Accuracy:** ±0.5 meters
+
+## Notes
+
+This map is for survey reference purposes only.  
+All measurements are approximate and subject to field verification.
+
+---
+
+*Generated by FieldConektiv on ', Sys.time(), '*'
+  )
+  
+  # Write to temporary file
+  rmd_file <- tempfile(fileext = ".Rmd")
+  writeLines(rmd_content, rmd_file)
+  
+  # Create environment with map_plot
+  env <- new.env()
+  env$map_plot <- map_plot
+  
+  # Render PDF
+  render(
+    rmd_file,
+    output_file = output_file,
+    quiet = TRUE,
+    envir = env
+  )
+  
+  # Clean up
+  file.remove(rmd_file)
+}
+
+# Function to save leaflet map as PNG
+save_leaflet_png <- function(map, output_file) {
+  # Save as HTML first
+  html_file <- tempfile(fileext = ".html")
+  htmlwidgets::saveWidget(map, html_file, selfcontained = TRUE)
+  
+  # Wait a moment for file to be written
+  Sys.sleep(1)
+  
+  # Try to convert to PNG
+  tryCatch({
+    webshot2::webshot(
+      html_file,
+      output_file,
+      vwidth = 1200,
+      vheight = 800,
+      delay = 2
+    )
+  }, error = function(e) {
+    # Fallback: create a simple PNG
+    png(output_file, width = 1200, height = 800)
+    plot(1, type = "n", xlab = "", ylab = "", xlim = c(0, 1), ylim = c(0, 1))
+    text(0.5, 0.5, "Map Preview Not Available", cex = 2)
+    dev.off()
+  })
+  
+  # Clean up
+  if (file.exists(html_file)) {
+    file.remove(html_file)
+  }
 }
 
 # UI Definition
@@ -1013,6 +1422,81 @@ ui <- fluidPage(
         border-left: 3px solid #FFB300;
       }
       
+      /* Table Styles */
+      .table {
+        width: 100%;
+        margin-bottom: 1rem;
+        background-color: transparent;
+        border-collapse: collapse;
+      }
+      
+      .table th {
+        font-weight: 600;
+        color: #2E7D32;
+        background-color: #F1F8E9;
+        text-align: left;
+      }
+      
+      .table td, .table th {
+        padding: 12px;
+        vertical-align: top;
+        border-top: 1px solid #C8E6C9;
+        border-bottom: 1px solid #C8E6C9;
+      }
+      
+      .table tbody tr:hover {
+        background-color: rgba(232, 245, 233, 0.3);
+      }
+      
+      /* Map container styles */
+      .map-container {
+        border: 2px solid #C8E6C9;
+        border-radius: 10px;
+        overflow: hidden;
+        margin: 20px 0;
+      }
+      
+      .map-preview {
+        width: 100%;
+        height: 400px;
+      }
+      
+      .download-buttons {
+        display: flex;
+        gap: 15px;
+        margin-top: 20px;
+      }
+      
+      .btn-pdf {
+        background-color: #D32F2F !important;
+        border-color: #D32F2F !important;
+      }
+      
+      .btn-pdf:hover {
+        background-color: #B71C1C !important;
+        border-color: #B71C1C !important;
+      }
+      
+      .btn-png {
+        background-color: #388E3C !important;
+        border-color: #388E3C !important;
+      }
+      
+      .btn-png:hover {
+        background-color: #2E7D32 !important;
+        border-color: #2E7D32 !important;
+      }
+      
+      /* Map preview in modal */
+      .map-preview-plot {
+        width: 100%;
+        height: 300px;
+        background-color: #f9fff9;
+        border: 1px solid #C8E6C9;
+        border-radius: 8px;
+        margin: 15px 0;
+      }
+      
       @media (max-width: 992px) {
         .content-wrapper {
           flex-direction: column;
@@ -1148,6 +1632,35 @@ ui <- fluidPage(
         margin-top: 0 !important;
         margin-bottom: 0 !important;
       }
+      
+      /* Progress bar styling */
+      .shiny-progress-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.7);
+        z-index: 9999;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      
+      .shiny-progress-bar {
+        background-color: #4CAF50;
+        height: 4px;
+        transition: width 0.3s ease;
+      }
+      
+      .shiny-progress-message {
+        background-color: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        max-width: 400px;
+      }
     "))
   ),
   
@@ -1170,12 +1683,54 @@ ui <- fluidPage(
             " | ",
             actionLink("contact_link", "Contact Support", style = "color: #4CAF50;")
         )
+    ),
+    
+    # Hidden download handlers
+    tags$div(
+      style = "display: none;",
+      downloadLink("download_modal_pdf", ""),
+      downloadLink("download_modal_png", "")
     )
   )
 )
 
 # Server logic
 server <- function(input, output, session) {
+  
+  # Add Progress class
+  Progress <- setRefClass("Progress",
+                          fields = list(
+                            session = "ANY",
+                            id = "character",
+                            message = "character",
+                            value = "numeric"
+                          ),
+                          methods = list(
+                            initialize = function(session) {
+                              .self$session <- session
+                              .self$id <- paste0("progress-", sample(100000:999999, 1))
+                            },
+                            set = function(message = NULL, value = NULL) {
+                              if (!is.null(message)) .self$message <- message
+                              if (!is.null(value)) .self$value <- value
+                              
+                              .self$session$sendCustomMessage(
+                                "shiny-progress",
+                                list(
+                                  id = .self$id,
+                                  message = .self$message,
+                                  value = .self$value * 100
+                                )
+                              )
+                            },
+                            close = function() {
+                              .self$session$sendCustomMessage(
+                                "shiny-progress",
+                                list(id = .self$id, action = "close")
+                              )
+                            }
+                          )
+  )
   
   # Reactive value to track current page
   current_page <- reactiveVal("home")
@@ -1193,6 +1748,12 @@ server <- function(input, output, session) {
   
   # Track selected survey type
   selected_survey_type <- reactiveVal(NULL)
+  
+  # Store survey data for download
+  survey_data_for_download <- reactiveValues(
+    data = NULL,
+    map_plot = NULL
+  )
   
   # Header based on current page
   output$page_header <- renderUI({
@@ -1440,6 +2001,13 @@ server <- function(input, output, session) {
                                      "Create Survey"
                                    ), 
                                    class = ifelse(dashboard_tab() == "create_survey", "nav-btn active", "nav-btn")),
+                      
+                      actionButton("nav_my_surveys", 
+                                   label = div(
+                                     icon("clipboard-list"),
+                                     "My Surveys"
+                                   ), 
+                                   class = ifelse(dashboard_tab() == "my_surveys", "nav-btn active", "nav-btn")),
                       
                       actionButton("nav_profile", 
                                    label = div(
@@ -2847,6 +3415,13 @@ server <- function(input, output, session) {
                           )
                       )
                     }
+                  } else if (dashboard_tab() == "my_surveys") {
+                    div(
+                      h2("My Submitted Surveys", style = "color: #1B5E20; margin-bottom: 25px;"),
+                      
+                      # User's surveys list
+                      uiOutput("my_surveys_list")
+                    )
                   } else if (dashboard_tab() == "profile") {
                     div(
                       h2("User Profile", style = "color: #1B5E20; margin-bottom: 25px;"),
@@ -3248,6 +3823,11 @@ server <- function(input, output, session) {
     selected_survey_type(NULL)
   })
   
+  observeEvent(input$nav_my_surveys, {
+    dashboard_tab("my_surveys")
+    selected_survey_type(NULL)
+  })
+  
   observeEvent(input$nav_profile, {
     dashboard_tab("profile")
     selected_survey_type(NULL)
@@ -3285,6 +3865,361 @@ server <- function(input, output, session) {
   
   observeEvent(input$back_to_survey_types, {
     selected_survey_type(NULL)
+  })
+  
+  # NEW: Handle Relocation Survey submission with fixes
+  observeEvent(input$submit_relocation_survey, {
+    # Prevent double submission
+    shinyjs::disable("submit_relocation_survey")
+    on.exit(shinyjs::enable("submit_relocation_survey"))
+    
+    # First, validate that user is logged in
+    if (!user_session$logged_in) {
+      showNotification("Please log in first to submit a survey.", type = "warning")
+      return()
+    }
+    
+    # Create a progress indicator
+    progress <- Progress$new(session)
+    on.exit(progress$close())
+    progress$set(message = "Processing your survey...", value = 0.3)
+    
+    # Validate required fields
+    required_fields <- list(
+      "Full Name" = input$relocation_full_name,
+      "Government ID Type" = input$government_id_type,
+      "Government ID Image" = input$government_id_image,
+      "Applicant Full Name" = input$applicant_full_name,
+      "Land Title Status" = input$land_title_status,
+      "Block Number" = input$block_number,
+      "Lot Number" = input$lot_number,
+      "Area" = input$area,
+      "Contact Phone" = input$contact_phone,
+      "Contact Email" = input$contact_email,
+      "Survey Reason" = input$survey_reason,
+      "Barangay Clearance" = input$barangay_clearance,
+      "Tax Delinquency Certificate" = input$tax_delinquency_cert
+    )
+    
+    missing_fields <- c()
+    for (field_name in names(required_fields)) {
+      value <- required_fields[[field_name]]
+      if (is.null(value) || (is.character(value) && value == "") || 
+          (is.numeric(value) && is.na(value))) {
+        missing_fields <- c(missing_fields, field_name)
+      }
+    }
+    
+    if (length(missing_fields) > 0) {
+      progress$close()
+      showNotification(
+        paste("Please fill in all required fields:", 
+              paste(missing_fields, collapse = ", ")),
+        type = "warning",
+        duration = 10
+      )
+      return()
+    }
+    
+    progress$set(message = "Validating inputs...", value = 0.5)
+    
+    # Validate email format
+    if (!grepl("^[^@]+@[^@]+\\.[^@]+$", input$contact_email)) {
+      progress$close()
+      showNotification("Please enter a valid email address.", type = "warning")
+      return()
+    }
+    
+    # Validate phone number (11 digits)
+    if (!grepl("^[0-9]{11}$", input$contact_phone)) {
+      progress$close()
+      showNotification("Phone number must be exactly 11 digits.", type = "warning")
+      return()
+    }
+    
+    # Validate area is positive
+    if (is.na(input$area) || input$area <= 0) {
+      progress$close()
+      showNotification("Area must be a positive number.", type = "warning")
+      return()
+    }
+    
+    # Validate block and lot numbers
+    if (is.na(input$block_number) || input$block_number <= 0) {
+      progress$close()
+      showNotification("Block number must be a positive integer.", type = "warning")
+      return()
+    }
+    
+    if (is.na(input$lot_number) || input$lot_number <= 0) {
+      progress$close()
+      showNotification("Lot number must be a positive integer.", type = "warning")
+      return()
+    }
+    
+    # Validate conditional documents based on land title status
+    title_status <- input$land_title_status
+    
+    # Check file uploads based on title status
+    if (title_status == "available") {
+      if (is.null(input$original_title)) {
+        progress$close()
+        showNotification("Please upload the Original Certificate of Title for Available land.", 
+                         type = "warning", duration = 10)
+        return()
+      }
+    } else if (title_status == "lost") {
+      if (is.null(input$ctc_title) || is.null(input$owners_duplicate) || is.null(input$tax_declaration_lost)) {
+        progress$close()
+        showNotification("Please upload all required documents for Lost title.", 
+                         type = "warning", duration = 10)
+        return()
+      }
+    } else if (title_status == "untitled") {
+      if (is.null(input$deed_conveyance) || is.null(input$tax_declaration_untitled) || is.null(input$tax_clearance)) {
+        progress$close()
+        showNotification("Please upload all required documents for Untitled land.", 
+                         type = "warning", duration = 10)
+        return()
+      }
+    } else if (title_status == "inheritance") {
+      if (is.null(input$estate_settlement) || is.null(input$affidavit_adjudication) || is.null(input$death_certificate)) {
+        progress$close()
+        showNotification("Please upload all required documents for Inherited land.", 
+                         type = "warning", duration = 10)
+        return()
+      }
+    }
+    
+    progress$set(message = "Saving uploaded files...", value = 0.6)
+    
+    # Save uploaded files and get their paths
+    # Save government ID image
+    gov_id_path <- save_uploaded_file(input$government_id_image)
+    if (is.null(gov_id_path)) {
+      progress$close()
+      showNotification("Failed to save government ID image.", type = "error")
+      return()
+    }
+    
+    # Save special power of attorney (if provided)
+    spa_path <- NULL
+    if (!is.null(input$special_power_attorney) && !is.null(input$special_power_attorney$name)) {
+      spa_path <- save_uploaded_file(input$special_power_attorney)
+    }
+    
+    # Save barangay clearance
+    barangay_path <- save_uploaded_file(input$barangay_clearance)
+    if (is.null(barangay_path)) {
+      progress$close()
+      showNotification("Failed to save barangay clearance.", type = "error")
+      return()
+    }
+    
+    # Save tax delinquency certificate
+    tax_delinquency_path <- save_uploaded_file(input$tax_delinquency_cert)
+    if (is.null(tax_delinquency_path)) {
+      progress$close()
+      showNotification("Failed to save tax delinquency certificate.", type = "error")
+      return()
+    }
+    
+    # Save documents based on title status
+    if (title_status == "available") {
+      original_title_path <- save_uploaded_file(input$original_title)
+      if (is.null(original_title_path)) {
+        progress$close()
+        showNotification("Failed to save original title.", type = "error")
+        return()
+      }
+    } else if (title_status == "lost") {
+      ctc_path <- save_uploaded_file(input$ctc_title)
+      owners_duplicate_path <- save_uploaded_file(input$owners_duplicate)
+      tax_declaration_path <- save_uploaded_file(input$tax_declaration_lost)
+      
+      if (is.null(ctc_path) || is.null(owners_duplicate_path) || is.null(tax_declaration_path)) {
+        progress$close()
+        showNotification("Failed to save one or more required documents for Lost title.", type = "error")
+        return()
+      }
+    } else if (title_status == "untitled") {
+      deed_path <- save_uploaded_file(input$deed_conveyance)
+      tax_dec_untitled_path <- save_uploaded_file(input$tax_declaration_untitled)
+      tax_clearance_path <- save_uploaded_file(input$tax_clearance)
+      
+      if (is.null(deed_path) || is.null(tax_dec_untitled_path) || is.null(tax_clearance_path)) {
+        progress$close()
+        showNotification("Failed to save one or more required documents for Untitled land.", type = "error")
+        return()
+      }
+    } else if (title_status == "inheritance") {
+      estate_path <- save_uploaded_file(input$estate_settlement)
+      affidavit_path <- save_uploaded_file(input$affidavit_adjudication)
+      death_cert_path <- save_uploaded_file(input$death_certificate)
+      
+      if (is.null(estate_path) || is.null(affidavit_path) || is.null(death_cert_path)) {
+        progress$close()
+        showNotification("Failed to save one or more required documents for Inherited land.", type = "error")
+        return()
+      }
+    }
+    
+    progress$set(message = "Preparing data for database...", value = 0.8)
+    
+    # Prepare form data for database
+    form_data <- list(
+      full_name = input$relocation_full_name,
+      government_id_type = input$government_id_type,
+      government_id_image = gov_id_path,
+      applicant_full_name = input$applicant_full_name,
+      special_power_attorney = ifelse(is.null(spa_path), "", spa_path),
+      land_title_status = title_status,
+      barangay_clearance = barangay_path,
+      tax_delinquency_certificate = tax_delinquency_path,
+      block_number = as.integer(input$block_number),
+      lot_number = as.integer(input$lot_number),
+      subdivision_name = ifelse(is.null(input$subdivision_name) || input$subdivision_name == "", 
+                                "", input$subdivision_name),
+      area = as.numeric(input$area),
+      area_unit = input$area_unit,
+      contact_phone = input$contact_phone,
+      contact_email = input$contact_email,
+      survey_reason = input$survey_reason,
+      additional_notes = ifelse(is.null(input$additional_notes) || input$additional_notes == "", 
+                                "", input$additional_notes),
+      urgency_level = input$survey_urgency
+    )
+    
+    # Save to database
+    result <- save_relocation_survey(user_session$user_id, form_data)
+    
+    progress$set(message = "Finalizing submission...", value = 0.9)
+    
+    if (result$success) {
+      relocation_id <- result$id
+      
+      # Create a modal dialog for success message
+      showModal(modalDialog(
+        title = HTML("<h3 style='color: #4CAF50;'>✓ Survey Submitted Successfully!</h3>"),
+        HTML(paste(
+          "<div style='padding: 20px;'>",
+          "<p><strong>Reference Number:</strong> ", relocation_id, "</p>",
+          "<p><strong>Applicant:</strong> ", input$applicant_full_name, "</p>",
+          "<p><strong>Land Title Status:</strong> ", tools::toTitleCase(title_status), "</p>",
+          "<p><strong>Submitted Date:</strong> ", format(Sys.time(), "%Y-%m-%d %H:%M"), "</p>",
+          "<hr>",
+          "<p>We will review your documents and contact you within 3 business days.</p>",
+          "<p>You can track your application status in your dashboard.</p>",
+          "</div>"
+        )),
+        footer = tagList(
+          actionButton("go_to_my_surveys", "View My Surveys", 
+                       class = "btn-primary",
+                       style = "background-color: #4CAF50;"),
+          modalButton("Close")
+        ),
+        easyClose = FALSE,
+        size = "m"
+      ))
+      
+      # Reset form using JavaScript
+      runjs("
+        // Clear text inputs
+        $('#relocation_full_name').val('');
+        $('#applicant_full_name').val('');
+        $('#subdivision_name').val('');
+        $('#contact_phone').val('');
+        $('#contact_email').val('');
+        $('#survey_reason').val('');
+        $('#additional_notes').val('');
+        
+        // Reset select inputs
+        $('#government_id_type').val('').trigger('change');
+        $('#land_title_status').val('').trigger('change');
+        $('#area_unit').val('sqm').trigger('change');
+        $('#survey_urgency').val('normal').trigger('change');
+        
+        // Reset number inputs
+        $('#block_number').val('');
+        $('#lot_number').val('');
+        $('#area').val('');
+        
+        // Clear file inputs
+        var fileInputs = ['government_id_image', 'special_power_attorney', 'barangay_clearance', 
+                          'tax_delinquency_cert', 'original_title', 'ctc_title', 
+                          'owners_duplicate', 'tax_declaration_lost', 'deed_conveyance',
+                          'tax_declaration_untitled', 'tax_clearance', 'estate_settlement',
+                          'affidavit_adjudication', 'death_certificate'];
+        
+        fileInputs.forEach(function(id) {
+          var element = document.getElementById(id);
+          if (element) {
+            element.value = '';
+          }
+        });
+        
+        // Reset conditional panels
+        Shiny.setInputValue('government_id_image', null);
+        Shiny.setInputValue('special_power_attorney', null);
+        Shiny.setInputValue('barangay_clearance', null);
+        Shiny.setInputValue('tax_delinquency_cert', null);
+      ")
+      
+    } else {
+      progress$close()
+      showNotification(
+        paste("Error saving survey:", result$message),
+        type = "error",
+        duration = 10
+      )
+    }
+    
+    progress$close()
+  })
+  
+  # NEW: Handle the modal button to go to My Surveys
+  observeEvent(input$go_to_my_surveys, {
+    removeModal()
+    dashboard_tab("my_surveys")
+    selected_survey_type(NULL)
+  })
+  
+  # Handle clearing the Relocation Survey form
+  observeEvent(input$clear_relocation_form, {
+    # Reset all inputs in the relocation form
+    updateTextInput(session, "relocation_full_name", value = "")
+    updateSelectInput(session, "government_id_type", selected = "")
+    updateTextInput(session, "applicant_full_name", value = "")
+    updateSelectInput(session, "land_title_status", selected = "")
+    updateNumericInput(session, "block_number", value = NULL)
+    updateNumericInput(session, "lot_number", value = NULL)
+    updateTextInput(session, "subdivision_name", value = "")
+    updateNumericInput(session, "area", value = NULL)
+    updateSelectInput(session, "area_unit", selected = "sqm")
+    updateTextInput(session, "contact_phone", value = "")
+    updateTextInput(session, "contact_email", value = "")
+    updateTextAreaInput(session, "survey_reason", value = "")
+    updateTextAreaInput(session, "additional_notes", value = "")
+    updateSelectInput(session, "survey_urgency", selected = "normal")
+    
+    # Clear file inputs using JavaScript
+    runjs("
+      // Clear file inputs
+      var fileInputs = ['government_id_image', 'special_power_attorney', 'barangay_clearance', 
+                        'tax_delinquency_cert', 'original_title', 'ctc_title', 
+                        'owners_duplicate', 'tax_declaration_lost', 'deed_conveyance',
+                        'tax_declaration_untitled', 'tax_clearance', 'estate_settlement',
+                        'affidavit_adjudication', 'death_certificate'];
+      
+      fileInputs.forEach(function(id) {
+        var element = document.getElementById(id);
+        if (element) {
+          element.value = '';
+        }
+      });
+    ")
+    
+    showNotification("Form cleared successfully.", type = "default", duration = 3)
   })
   
   # Handle Subdivision Survey submission
@@ -3538,119 +4473,6 @@ server <- function(input, output, session) {
     showNotification("Topography form cleared successfully.", type = "default", duration = 3)
   })
   
-  # Handle Relocation Survey submission
-  observeEvent(input$submit_relocation_survey, {
-    # Validate required fields
-    required_fields <- list(
-      "Full Name" = input$relocation_full_name,
-      "Government ID Type" = input$government_id_type,
-      "Government ID Image" = input$government_id_image,
-      "Applicant Full Name" = input$applicant_full_name,
-      "Land Title Status" = input$land_title_status,
-      "Block Number" = input$block_number,
-      "Lot Number" = input$lot_number,
-      "Area" = input$area,
-      "Contact Phone" = input$contact_phone,
-      "Contact Email" = input$contact_email,
-      "Survey Reason" = input$survey_reason,
-      "Barangay Clearance" = input$barangay_clearance,
-      "Tax Delinquency Certificate" = input$tax_delinquency_cert
-    )
-    
-    missing_fields <- c()
-    for (field_name in names(required_fields)) {
-      value <- required_fields[[field_name]]
-      if (is.null(value) || (is.character(value) && value == "") || 
-          (is.numeric(value) && is.na(value))) {
-        missing_fields <- c(missing_fields, field_name)
-      }
-    }
-    
-    if (length(missing_fields) > 0) {
-      showNotification(
-        paste("Please fill in all required fields:", 
-              paste(missing_fields, collapse = ", ")),
-        type = "warning",
-        duration = 10
-      )
-      return()
-    }
-    
-    # Validate conditional documents based on land title status
-    title_status <- input$land_title_status
-    
-    if (title_status == "available") {
-      if (is.null(input$original_title)) {
-        showNotification("Please upload the Original Certificate of Title for Available land.", 
-                         type = "warning", duration = 10)
-        return()
-      }
-    } else if (title_status == "lost") {
-      if (is.null(input$ctc_title) || is.null(input$owners_duplicate) || is.null(input$tax_declaration_lost)) {
-        showNotification("Please upload all required documents for Lost title.", 
-                         type = "warning", duration = 10)
-        return()
-      }
-    } else if (title_status == "untitled") {
-      if (is.null(input$deed_conveyance) || is.null(input$tax_declaration_untitled) || is.null(input$tax_clearance)) {
-        showNotification("Please upload all required documents for Untitled land.", 
-                         type = "warning", duration = 10)
-        return()
-      }
-    } else if (title_status == "inheritance") {
-      if (is.null(input$estate_settlement) || is.null(input$affidavit_adjudication) || is.null(input$death_certificate)) {
-        showNotification("Please upload all required documents for Inherited land.", 
-                         type = "warning", duration = 10)
-        return()
-      }
-    }
-    
-    # Validate email format
-    if (!grepl("^[^@]+@[^@]+\\.[^@]+$", input$contact_email)) {
-      showNotification("Please enter a valid email address.", type = "warning")
-      return()
-    }
-    
-    # All validation passed - show success message
-    showNotification(
-      HTML(paste(
-        "<h4>Relocation Survey Request Submitted Successfully!</h4>",
-        "<p><strong>Reference Number:</strong> RELOC-", 
-        format(Sys.time(), "%Y%m%d%H%M%S"), "</p>",
-        "<p><strong>Applicant:</strong> ", input$applicant_full_name, "</p>",
-        "<p><strong>Land Title Status:</strong> ", tools::toTitleCase(title_status), "</p>",
-        "<p>We will review your documents and contact you within 3 business days.</p>"
-      )),
-      type = "success",
-      duration = 15
-    )
-    
-    # Reset form and return to survey types
-    shinyjs::reset("relocation-survey-form")
-    selected_survey_type(NULL)
-  })
-  
-  # Handle clearing the Relocation Survey form
-  observeEvent(input$clear_relocation_form, {
-    # Reset all inputs in the relocation form
-    updateTextInput(session, "relocation_full_name", value = "")
-    updateSelectInput(session, "government_id_type", selected = "")
-    updateTextInput(session, "applicant_full_name", value = "")
-    updateSelectInput(session, "land_title_status", selected = "")
-    updateNumericInput(session, "block_number", value = NULL)
-    updateNumericInput(session, "lot_number", value = NULL)
-    updateTextInput(session, "subdivision_name", value = "")
-    updateNumericInput(session, "area", value = NULL)
-    updateSelectInput(session, "area_unit", selected = "sqm")
-    updateTextInput(session, "contact_phone", value = "")
-    updateTextInput(session, "contact_email", value = "")
-    updateTextAreaInput(session, "survey_reason", value = "")
-    updateTextAreaInput(session, "additional_notes", value = "")
-    updateSelectInput(session, "survey_urgency", selected = "normal")
-    
-    showNotification("Form cleared successfully.", type = "default", duration = 3)
-  })
-  
   observeEvent(input$submit_verification_survey, {
     # Validate required fields
     required_fields <- list(
@@ -3743,6 +4565,523 @@ server <- function(input, output, session) {
     updateSelectInput(session, "verification_survey_urgency", selected = "normal")
     
     showNotification("Verification form cleared successfully.", type = "default", duration = 3)
+  })
+  
+  # NEW: Updated Render user's surveys with download functionality
+  output$my_surveys_list <- renderUI({
+    if (!user_session$logged_in) {
+      return(div(p("Please log in to view your surveys.")))
+    }
+    
+    # Force refresh when dashboard tab changes
+    input$nav_my_surveys
+    
+    surveys <- fetch_user_surveys(user_session$user_id)
+    
+    if (nrow(surveys) == 0) {
+      return(div(
+        class = "survey-section",
+        style = "text-align: center; padding: 40px;",
+        h3("No Surveys Yet", style = "color: #666;"),
+        p("You haven't submitted any surveys yet.", style = "margin-bottom: 30px;"),
+        actionButton("create_new_survey_from_list", "Create New Survey", 
+                     class = "btn-primary",
+                     style = "padding: 12px 30px; font-size: 16px;")
+      ))
+    }
+    
+    # Create a table of surveys
+    div(
+      style = "overflow-x: auto; margin-top: 20px;",
+      tags$table(
+        class = "table",
+        style = "width: 100%; border-collapse: collapse; min-width: 800px;",
+        tags$thead(
+          tags$tr(
+            tags$th("Reference ID", style = "padding: 15px; background-color: #4CAF50; color: white; font-weight: 600; border-bottom: 2px solid #388E3C;"),
+            tags$th("Applicant", style = "padding: 15px; background-color: #4CAF50; color: white; font-weight: 600; border-bottom: 2px solid #388E3C;"),
+            tags$th("Title Status", style = "padding: 15px; background-color: #4CAF50; color: white; font-weight: 600; border-bottom: 2px solid #388E3C;"),
+            tags$th("Urgency", style = "padding: 15px; background-color: #4CAF50; color: white; font-weight: 600; border-bottom: 2px solid #388E3C;"),
+            tags$th("Status", style = "padding: 15px; background-color: #4CAF50; color: white; font-weight: 600; border-bottom: 2px solid #388E3C;"),
+            tags$th("Submitted", style = "padding: 15px; background-color: #4CAF50; color: white; font-weight: 600; border-bottom: 2px solid #388E3C;"),
+            tags$th("Actions", style = "padding: 15px; background-color: #4CAF50; color: white; font-weight: 600; border-bottom: 2px solid #388E3C;")
+          )
+        ),
+        tags$tbody(
+          lapply(1:nrow(surveys), function(i) {
+            survey <- surveys[i, ]
+            
+            # Determine status color
+            status_color <- switch(survey$relocation_status,
+                                   "Completed" = "#4CAF50",
+                                   "Checking" = "#FF9800",
+                                   "Revision" = "#F44336",
+                                   "Submitted" = "#2196F3",
+                                   "#9E9E9E")
+            
+            # Determine urgency color
+            urgency_color <- switch(survey$urgency_level,
+                                    "normal" = "#4CAF50",
+                                    "high" = "#FF9800",
+                                    "urgent" = "#F44336",
+                                    "emergency" = "#D32F2F",
+                                    "#9E9E9E")
+            
+            # Format submitted date
+            submitted_date <- ifelse(!is.na(survey$submitted_at),
+                                     format(as.Date(survey$submitted_at), "%Y-%m-%d"),
+                                     "N/A")
+            
+            tags$tr(
+              style = "border-bottom: 1px solid #E8F5E9; background-color: white;",
+              onmouseover = "this.style.backgroundColor='#F9FFF9';",
+              onmouseout = "this.style.backgroundColor='white';",
+              tags$td(
+                tags$strong(survey$RelocationID),
+                style = "padding: 15px; font-weight: 600; color: #2E7D32;"
+              ),
+              tags$td(survey$applicant_full_name, style = "padding: 15px;"),
+              tags$td(
+                span(
+                  class = "badge",
+                  style = "background-color: #E8F5E9; color: #2E7D32; padding: 6px 12px; border-radius: 20px;",
+                  tools::toTitleCase(gsub("_", " ", survey$land_title_status))
+                ),
+                style = "padding: 15px;"
+              ),
+              tags$td(
+                span(
+                  class = "badge",
+                  style = paste("background-color:", urgency_color, "; color: white; padding: 6px 12px; border-radius: 20px;"),
+                  tools::toTitleCase(gsub("_", " ", survey$urgency_level))
+                ),
+                style = "padding: 15px;"
+              ),
+              tags$td(
+                span(
+                  class = "badge",
+                  style = paste("background-color:", status_color, "; color: white; padding: 6px 12px; border-radius: 20px;"),
+                  survey$relocation_status
+                ),
+                style = "padding: 15px;"
+              ),
+              tags$td(submitted_date, style = "padding: 15px; color: #666;"),
+              tags$td(
+                div(
+                  style = "display: flex; gap: 5px;",
+                  actionButton(paste0("view_survey_", i), "View", 
+                               class = "btn-secondary",
+                               style = "padding: 6px 12px; font-size: 12px;"),
+                  actionButton(paste0("download_survey_", i), "Download", 
+                               class = "btn-secondary",
+                               style = "padding: 6px 12px; font-size: 12px;")
+                ),
+                style = "padding: 15px;"
+              )
+            )
+          })
+        )
+      ),
+      br(),
+      div(
+        style = "text-align: center; margin-top: 30px;",
+        actionButton("create_new_survey_from_list", "Create New Survey", 
+                     class = "btn-primary",
+                     style = "padding: 12px 30px; font-size: 16px;")
+      )
+    )
+  })
+  
+  # Handle create new survey button from surveys list
+  observeEvent(input$create_new_survey_from_list, {
+    dashboard_tab("create_survey")
+    selected_survey_type("Relocation")
+  })
+  
+  # Handle survey view buttons - Show modal with details
+  observe({
+    surveys <- fetch_user_surveys(user_session$user_id)
+    
+    if (nrow(surveys) > 0) {
+      for (i in 1:nrow(surveys)) {
+        local({
+          local_i <- i
+          survey <- surveys[local_i, ]
+          
+          observeEvent(input[[paste0("view_survey_", local_i)]], {
+            if (!user_session$logged_in) {
+              showNotification("Please log in to view survey details.", type = "warning")
+              return()
+            }
+            
+            # Store survey data for download
+            survey_data_for_download$data <- survey
+            
+            # Show survey details in a modal
+            showModal(modalDialog(
+              title = HTML(paste0(
+                "<h3 style='color: #4CAF50;'>Survey Details - ", 
+                survey$RelocationID, "</h3>"
+              )),
+              size = "l",
+              easyClose = TRUE,
+              footer = modalButton("Close"),
+              
+              div(
+                style = "padding: 20px;",
+                
+                # Basic information
+                div(
+                  style = "display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;",
+                  div(
+                    h4("Survey Information", style = "color: #2E7D32;"),
+                    p(strong("Applicant:"), survey$applicant_full_name),
+                    p(strong("Full Name:"), survey$full_name),
+                    p(strong("Block Number:"), survey$block_number),
+                    p(strong("Lot Number:"), survey$lot_number),
+                    p(strong("Area:"), paste(survey$area, survey$area_unit))
+                  ),
+                  div(
+                    h4("Status Information", style = "color: #2E7D32;"),
+                    p(strong("Status:"), span(
+                      style = paste0(
+                        "background-color: ",
+                        switch(survey$relocation_status,
+                               "Submitted" = "#2196F3",
+                               "Checking" = "#FF9800",
+                               "Completed" = "#4CAF50",
+                               "Revision" = "#F44336",
+                               "#9E9E9E"),
+                        "; color: white; padding: 5px 10px; border-radius: 4px;"
+                      ),
+                      survey$relocation_status
+                    )),
+                    p(strong("Urgency:"), tools::toTitleCase(gsub("_", " ", survey$urgency_level))),
+                    p(strong("Submitted:"), ifelse(!is.na(survey$submitted_at), 
+                                                   format(as.Date(survey$submitted_at), "%B %d, %Y"), 
+                                                   "N/A")),
+                    p(strong("Last Updated:"), ifelse(!is.na(survey$updated_at), 
+                                                      format(as.Date(survey$updated_at), "%B %d, %Y"), 
+                                                      "N/A"))
+                  )
+                ),
+                
+                # Map preview
+                div(
+                  h4("Map Preview", style = "color: #2E7D32; margin-top: 30px;"),
+                  plotOutput(paste0("map_preview_", local_i), height = "300px"),
+                  style = "border: 1px solid #E8F5E9; padding: 15px; border-radius: 8px;"
+                ),
+                
+                # Download options
+                div(
+                  style = "display: flex; gap: 15px; margin-top: 30px;",
+                  actionButton(paste0("download_pdf_", local_i), 
+                               "Download PDF Report",
+                               icon = icon("file-pdf"),
+                               class = "btn-primary btn-pdf",
+                               style = "padding: 12px 24px;"),
+                  actionButton(paste0("download_png_", local_i), 
+                               "Download PNG Map",
+                               icon = icon("image"),
+                               class = "btn-primary btn-png",
+                               style = "padding: 12px 24px;")
+                )
+              )
+            ))
+          })
+          
+          # Render map preview
+          output[[paste0("map_preview_", local_i)]] <- renderPlot({
+            # Generate sample map data
+            polygon_coords <- generate_subdivision_map(
+              as.numeric(gsub("[^0-9]", "", survey$RelocationID)),
+              as.numeric(survey$lot_number),
+              as.numeric(survey$block_number),
+              as.numeric(survey$area)
+            )
+            
+            # Create and render static map
+            create_static_map(
+              polygon_coords,
+              ifelse(is.na(survey$subdivision_name) || survey$subdivision_name == "", 
+                     "Unnamed Subdivision", survey$subdivision_name),
+              survey$lot_number,
+              survey$block_number,
+              survey$area
+            )
+          }, res = 96)
+          
+          # Handle PDF download from modal
+          observeEvent(input[[paste0("download_pdf_", local_i)]], {
+            # Same PDF generation logic as before
+            progress <- Progress$new(session)
+            on.exit(progress$close())
+            progress$set(message = "Generating PDF report...", value = 0.3)
+            
+            tryCatch({
+              polygon_coords <- generate_subdivision_map(
+                as.numeric(gsub("[^0-9]", "", survey$RelocationID)),
+                as.numeric(survey$lot_number),
+                as.numeric(survey$block_number),
+                as.numeric(survey$area)
+              )
+              
+              progress$set(message = "Creating map visualization...", value = 0.6)
+              
+              map_plot <- create_static_map(
+                polygon_coords,
+                ifelse(is.na(survey$subdivision_name) || survey$subdivision_name == "", 
+                       "Unnamed Subdivision", survey$subdivision_name),
+                survey$lot_number,
+                survey$block_number,
+                survey$area
+              )
+              
+              progress$set(message = "Compiling PDF document...", value = 0.8)
+              
+              # Generate PDF file
+              pdf_file <- paste0("Subdivision_Report_", survey$RelocationID, ".pdf")
+              pdf_path <- file.path(tempdir(), pdf_file)
+              
+              generate_pdf_report(survey, map_plot, pdf_path)
+              
+              progress$set(message = "Finalizing download...", value = 1)
+              
+              # Create download handler
+              output$download_modal_pdf <- downloadHandler(
+                filename = pdf_file,
+                content = function(file) {
+                  file.copy(pdf_path, file)
+                },
+                contentType = "application/pdf"
+              )
+              
+              shinyjs::runjs("$('#download_modal_pdf')[0].click();")
+              
+              showNotification("PDF report generated successfully!", type = "success")
+              
+            }, error = function(e) {
+              showNotification(paste("Error generating PDF:", e$message), type = "error")
+            })
+          })
+          
+          # Handle PNG download from modal
+          observeEvent(input[[paste0("download_png_", local_i)]], {
+            progress <- Progress$new(session)
+            on.exit(progress$close())
+            progress$set(message = "Generating PNG map...", value = 0.3)
+            
+            tryCatch({
+              polygon_coords <- generate_subdivision_map(
+                as.numeric(gsub("[^0-9]", "", survey$RelocationID)),
+                as.numeric(survey$lot_number),
+                as.numeric(survey$block_number),
+                as.numeric(survey$area)
+              )
+              
+              progress$set(message = "Creating interactive map...", value = 0.6)
+              
+              # Create interactive map
+              map <- create_interactive_map(
+                polygon_coords,
+                ifelse(is.na(survey$subdivision_name) || survey$subdivision_name == "", 
+                       "Unnamed Subdivision", survey$subdivision_name),
+                survey$lot_number,
+                survey$block_number
+              )
+              
+              progress$set(message = "Exporting to PNG...", value = 0.8)
+              
+              # Save as PNG
+              png_file <- paste0("Subdivision_Map_", survey$RelocationID, ".png")
+              png_path <- file.path(tempdir(), png_file)
+              
+              save_leaflet_png(map, png_path)
+              
+              progress$set(message = "Finalizing download...", value = 1)
+              
+              # Create download handler
+              output$download_modal_png <- downloadHandler(
+                filename = png_file,
+                content = function(file) {
+                  file.copy(png_path, file)
+                },
+                contentType = "image/png"
+              )
+              
+              shinyjs::runjs("$('#download_modal_png')[0].click();")
+              
+              showNotification("PNG map generated successfully!", type = "success")
+              
+            }, error = function(e) {
+              showNotification(paste("Error generating PNG:", e$message), type = "error")
+            })
+          })
+        })
+      }
+    }
+  })
+  
+  # Handle direct download buttons from table
+  observe({
+    surveys <- fetch_user_surveys(user_session$user_id)
+    
+    if (nrow(surveys) > 0) {
+      for (i in 1:nrow(surveys)) {
+        local({
+          local_i <- i
+          survey <- surveys[local_i, ]
+          
+          observeEvent(input[[paste0("download_survey_", local_i)]], {
+            if (!user_session$logged_in) {
+              showNotification("Please log in to download surveys.", type = "warning")
+              return()
+            }
+            
+            # Ask user which format they want
+            showModal(modalDialog(
+              title = HTML(paste0(
+                "<h3 style='color: #4CAF50;'>Download Options - ", 
+                survey$RelocationID, "</h3>"
+              )),
+              size = "m",
+              easyClose = TRUE,
+              footer = modalButton("Cancel"),
+              
+              div(
+                style = "padding: 20px; text-align: center;",
+                p("Choose the format you want to download:"),
+                
+                div(
+                  style = "display: flex; gap: 15px; justify-content: center; margin-top: 20px;",
+                  actionButton(paste0("quick_download_pdf_", local_i), 
+                               "PDF Report",
+                               icon = icon("file-pdf"),
+                               class = "btn-primary btn-pdf",
+                               style = "padding: 12px 24px;"),
+                  actionButton(paste0("quick_download_png_", local_i), 
+                               "PNG Map",
+                               icon = icon("image"),
+                               class = "btn-primary btn-png",
+                               style = "padding: 12px 24px;")
+                )
+              )
+            ))
+          })
+          
+          # Quick PDF download
+          observeEvent(input[[paste0("quick_download_pdf_", local_i)]], {
+            removeModal()
+            
+            progress <- Progress$new(session)
+            on.exit(progress$close())
+            progress$set(message = "Generating PDF report...", value = 0.3)
+            
+            tryCatch({
+              polygon_coords <- generate_subdivision_map(
+                as.numeric(gsub("[^0-9]", "", survey$RelocationID)),
+                as.numeric(survey$lot_number),
+                as.numeric(survey$block_number),
+                as.numeric(survey$area)
+              )
+              
+              progress$set(message = "Creating map visualization...", value = 0.6)
+              
+              map_plot <- create_static_map(
+                polygon_coords,
+                ifelse(is.na(survey$subdivision_name) || survey$subdivision_name == "", 
+                       "Unnamed Subdivision", survey$subdivision_name),
+                survey$lot_number,
+                survey$block_number,
+                survey$area
+              )
+              
+              progress$set(message = "Compiling PDF document...", value = 0.8)
+              
+              # Generate PDF file
+              pdf_file <- paste0("Subdivision_Report_", survey$RelocationID, ".pdf")
+              pdf_path <- file.path(tempdir(), pdf_file)
+              
+              generate_pdf_report(survey, map_plot, pdf_path)
+              
+              progress$set(message = "Finalizing download...", value = 1)
+              
+              # Create download handler
+              output$download_modal_pdf <- downloadHandler(
+                filename = pdf_file,
+                content = function(file) {
+                  file.copy(pdf_path, file)
+                },
+                contentType = "application/pdf"
+              )
+              
+              shinyjs::runjs("$('#download_modal_pdf')[0].click();")
+              
+              showNotification("PDF report downloaded successfully!", type = "success")
+              
+            }, error = function(e) {
+              showNotification(paste("Error:", e$message), type = "error")
+            })
+          })
+          
+          # Quick PNG download
+          observeEvent(input[[paste0("quick_download_png_", local_i)]], {
+            removeModal()
+            
+            progress <- Progress$new(session)
+            on.exit(progress$close())
+            progress$set(message = "Generating PNG map...", value = 0.3)
+            
+            tryCatch({
+              polygon_coords <- generate_subdivision_map(
+                as.numeric(gsub("[^0-9]", "", survey$RelocationID)),
+                as.numeric(survey$lot_number),
+                as.numeric(survey$block_number),
+                as.numeric(survey$area)
+              )
+              
+              progress$set(message = "Creating interactive map...", value = 0.6)
+              
+              # Create interactive map
+              map <- create_interactive_map(
+                polygon_coords,
+                ifelse(is.na(survey$subdivision_name) || survey$subdivision_name == "", 
+                       "Unnamed Subdivision", survey$subdivision_name),
+                survey$lot_number,
+                survey$block_number
+              )
+              
+              progress$set(message = "Exporting to PNG...", value = 0.8)
+              
+              # Save as PNG
+              png_file <- paste0("Subdivision_Map_", survey$RelocationID, ".png")
+              png_path <- file.path(tempdir(), png_file)
+              
+              save_leaflet_png(map, png_path)
+              
+              progress$set(message = "Finalizing download...", value = 1)
+              
+              # Create download handler
+              output$download_modal_png <- downloadHandler(
+                filename = png_file,
+                content = function(file) {
+                  file.copy(png_path, file)
+                },
+                contentType = "image/png"
+              )
+              
+              shinyjs::runjs("$('#download_modal_png')[0].click();")
+              
+              showNotification("PNG map downloaded successfully!", type = "success")
+              
+            }, error = function(e) {
+              showNotification(paste("Error:", e$message), type = "error")
+            })
+          })
+        })
+      }
+    }
   })
   
   # Update profile handler
